@@ -1,0 +1,1 @@
+/home/phuc/working/a1_sim/unitree_ros2/unitree_description/build/a1_description/ament_cmake_environment_hooks/local_setup.zsh
