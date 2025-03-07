@@ -7,6 +7,7 @@ sudo apt update
 sudo apt install ros-humble-ament-cmake
 sudo apt install ros-humble-eigen3-cmake-module
 sudo apt install libeigen3-dev
+sudo apt install liblcm-dev
 
 # Install runtime dependencies
 sudo apt install ros-humble-pluginlib
