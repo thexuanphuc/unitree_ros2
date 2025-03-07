@@ -1,4 +1,5 @@
-a1_gazebo:
+# a1_gazebo:
+ros__parameters:
     # Publish all joint states -----------------------------------
     joint_state_controller:
         type: joint_state_controller/JointStateController
