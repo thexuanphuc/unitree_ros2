@@ -1,5 +1,5 @@
-#ifndef UNITREE_CONTROLLER__TYPES_HPP_
-#define UNITREE_CONTROLLER__TYPES_HPP_
+#ifndef UNITREE_CONTROLLER__TYPES_FIX_1_HPP_
+#define UNITREE_CONTROLLER__TYPES_FIX_1_HPP_
 
 #include <string>
 #include <stdexcept>
@@ -102,29 +102,29 @@ enum class ControlMode {
   SittingDown,
 };
 
-std::string FromControlModeToString(const ControlMode control_mode) {
+inline std::string FromControlModeToString(const ControlMode control_mode) {
   switch (control_mode)
   {
   case ControlMode::ZeroTorque:
-    return "ZeroTorque"
-    break;
+    return "ZeroTorque";
+    // break;
   case ControlMode::StandingUp:
-    return "StandingUp"
-    break;
+    return "StandingUp";
+    // break;
   case ControlMode::Control:
-    return "Control"
-    break;
+    return "Control";
+    // break;
   case ControlMode::SittingDown:
-    return "SittingDown"
-    break;
+    return "SittingDown";
+    // break;
   default:
     throw std::runtime_error("Invalid ControlMode");
     return "";
-    break;
+    // break;
   }
 }
 
-ControlMode FromStringToControlMode(const std::string& control_mode) {
+inline ControlMode FromStringToControlMode(const std::string& control_mode) {
   if (control_mode == "ZeroTorque" || control_mode == "zero_torque") {
     return ControlMode::ZeroTorque;
   }
@@ -139,10 +139,10 @@ ControlMode FromStringToControlMode(const std::string& control_mode) {
   }
   else {
     throw std::runtime_error("Invalid ControlMode");
-    return ControlMode::ZeroTorque:
+    return ControlMode::ZeroTorque;
   }
 }
 
 } // namespace unitree_controller
 
-#endif  // UNITREE_CONTROLLER__TYPES_HPP_
+#endif  // UNITREE_CONTROLLER__TYPES_FIX_1_HPP_

@@ -31,7 +31,7 @@ namespace unitree_hardware
 class UnitreeHardware final : public hardware_interface::SystemInterface
 {
 public:
-  RCLCPP_SHARED_PTR_DEFINITIONS(UnitreeHardware);
+  RCLCPP_SHARED_PTR_DEFINITIONS(UnitreeHardware)
 
   UNITREE_HARDWARE_PUBLIC
   UnitreeHardware();

@@ -20,7 +20,7 @@ find_package(ament_cmake REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(lcm REQUIRED)
+# find_package(lcm REQUIRED)
 
 add_library(unitree_legged_sdk_amd64 SHARED IMPORTED)
 set_target_properties(

@@ -150,6 +150,7 @@ controller_interface::return_type UnitreeControllerInterface::update(
 controller_interface::CallbackReturn
 UnitreeControllerInterface::on_configure(const rclcpp_lifecycle::State & previous_state)
 {
+  (void)previous_state;
   auto ret = this->read_parameters();
   if (ret != controller_interface::CallbackReturn::SUCCESS)
   {
@@ -171,7 +172,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     hardware_interface::HW_IF_POSITION, qJ_interface_)) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu qJ_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %d qJ_interface, got %ld.", 
       12, qJ_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -179,7 +180,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     hardware_interface::HW_IF_VELOCITY, dqJ_interface_)) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu dqJ_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %d dqJ_interface, got %ld.", 
       12, dqJ_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -187,7 +188,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     hardware_interface::HW_IF_EFFORT, tauJ_interface_))
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu tauJ_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %d tauJ_interface, got %ld.", 
       12, tauJ_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -207,7 +208,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
   if (imu_orientation_interface_.size() != 4) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu imu_orientation_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u imu_orientation_interface, got %lu.", 
       4, imu_orientation_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -220,7 +221,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
   if (imu_angular_velocity_interface_.size() != 3) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu imu_angular_velocity_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u imu_angular_velocity_interface, got %lu.", 
       3, imu_orientation_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -233,7 +234,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
   if (imu_linear_acceleration_interface_.size() != 3) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu imu_linear_acceleration_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u imu_linear_acceleration_interface, got %lu.", 
       3, imu_linear_acceleration_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -248,7 +249,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
   if (foot_force_sensor_interface_.size() != 4) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu foot_force_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u foot_force_interface, got %lu.", 
       4, foot_force_sensor_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -263,7 +264,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     hardware_interface::HW_IF_POSITION, qJ_cmd_interface_))
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu qJ_cmd_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u qJ_cmd_interface, got %lu.", 
       12, qJ_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -271,7 +272,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     hardware_interface::HW_IF_VELOCITY, dqJ_cmd_interface_))
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu dqJ_cmd_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u dqJ_cmd_interface, got %lu.", 
       12, dqJ_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -279,7 +280,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     hardware_interface::HW_IF_EFFORT, tauJ_cmd_interface_)) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu tauJ_cmd_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u tauJ_cmd_interface, got %lu.", 
       12, tauJ_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -287,7 +288,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     "Kp", Kp_cmd_interface_)) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu Kp_cmd_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u Kp_cmd_interface, got %lu.", 
       12, Kp_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
@@ -295,7 +296,7 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
                                                     "Kd", Kd_cmd_interface_)) 
   {
     RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %zu Kp_cmd_interface, got %zu.", 
+      get_node()->get_logger(), "Expected %u Kp_cmd_interface, got %lu.", 
       12, Kd_cmd_interface_.size());
     return controller_interface::CallbackReturn::ERROR;
   }
