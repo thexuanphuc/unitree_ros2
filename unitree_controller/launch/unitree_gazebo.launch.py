@@ -10,7 +10,7 @@ import os
 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
+from launch_ros.descriptions import ParameterValue
 
 def generate_launch_description():
     # Declare arguments
@@ -92,11 +92,11 @@ def generate_launch_description():
             'true',
             " ",
             "DEBUG:=",
-            'false',
+            'true',
             " ",
         ]
     )
-    robot_description = {"robot_description": robot_description_content}
+    robot_description = {"robot_description": ParameterValue(robot_description_content, value_type=str)}
 
     robot_controllers = PathJoinSubstitution(
         [FindPackageShare(controllers_config_package), controllers_config_file]
@@ -109,12 +109,12 @@ def generate_launch_description():
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('gazebo_ros'), 'launch'), 
             '/gazebo.launch.py']), 
-        launch_arguments = {'pause': 'false'}.items(),
+        launch_arguments = {"verbose": "true",'pause': 'false'}.items(),
     )
     spawn_entity = Node(
         package='gazebo_ros', 
         executable='spawn_entity.py', 
-        arguments=['-topic', 'robot_description', '-entity', 'a1', 
+        arguments=['-topic', 'robot_description', '-entity', 'a1_phuc', 
                    '-x', '0', '-y', '0', '-z', '0.5'],
                 #    '-x', '0', '-y', '0', '-z', '0.5', '-unpause'],
         output='screen',
@@ -124,6 +124,7 @@ def generate_launch_description():
         package="controller_manager",
         executable="ros2_control_node",
         parameters=[robot_description, robot_controllers],
+        # parameters=[robot_controllers],
         output="both",
     )
     robot_state_pub_node = Node(
@@ -145,12 +146,14 @@ def generate_launch_description():
         package="controller_manager",
         executable="spawner",
         arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+        # arguments=["joint_state_broadcaster"],
     )
 
     robot_controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=[robot_controller, "-c", "/controller_manager"],
+        # arguments=["robot_controller","--param-file", robot_controllers],
     )
 
     # Delay rviz start after `joint_state_broadcaster`
@@ -160,6 +163,14 @@ def generate_launch_description():
             on_exit=[rviz_node],
         )
     )
+
+    # this is for sliders to control the joints
+    # jsp = Node(
+    #     package='joint_state_publisher_gui',
+    #     executable='joint_state_publisher_gui',
+    #     output='screen',
+    # )
+
 
     # Delay start of robot_controller after `joint_state_broadcaster`
     delay_robot_controller_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
@@ -177,6 +188,7 @@ def generate_launch_description():
         joint_state_broadcaster_spawner,
         delay_rviz_after_joint_state_broadcaster_spawner,
         delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
+        # jsp,
     ]
 
     return LaunchDescription(declared_arguments + nodes)

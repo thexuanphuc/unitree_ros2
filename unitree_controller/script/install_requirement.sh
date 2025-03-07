@@ -25,7 +25,7 @@ sudo apt install ros-humble-imu-sensor-broadcaster
 sudo apt install ros-humble-force-torque-sensor-broadcaster
 sudo apt install ros-humble-gazebo-ros
 sudo apt install ros-humble-gazebo-ros2-control
-
+sudo apt install ros-humble-controller-manager
 # Install test dependencies
 sudo apt install ros-humble-ament-lint-auto
 sudo apt install ros-humble-ament-lint-common
