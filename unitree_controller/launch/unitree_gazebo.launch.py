@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, RegisterEventHandler, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, RegisterEventHandler, IncludeLaunchDescription, TimerAction, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
@@ -13,6 +13,8 @@ from launch_ros.substitutions import FindPackageShare
 from launch_ros.descriptions import ParameterValue
 
 def generate_launch_description():
+    #################################### CONFIG PART ##################################
+
     # Declare arguments
     declared_arguments = []
     declared_arguments.append(
@@ -105,6 +107,9 @@ def generate_launch_description():
         [FindPackageShare(rviz_config_package), rviz_config_file]
     )
 
+    #################################### DEFINE NODE ##################################
+
+
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('gazebo_ros'), 'launch'), 
@@ -114,7 +119,7 @@ def generate_launch_description():
     spawn_entity = Node(
         package='gazebo_ros', 
         executable='spawn_entity.py', 
-        arguments=['-topic', 'robot_description', '-entity', 'a1_phuc', 
+        arguments=['-topic', 'robot_description', '-entity', 'a1_aida', 
                    '-x', '0', '-y', '0', '-z', '0.5'],
                 #    '-x', '0', '-y', '0', '-z', '0.5', '-unpause'],
         output='screen',
@@ -127,12 +132,33 @@ def generate_launch_description():
         # parameters=[robot_controllers],
         output="both",
     )
+    # it is working this way, can we use this to load the controller
+    load_joint_state_controller_phuc = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'joint_state_controller_phuc'],
+        output='screen'
+    )
+    load_FL_hip_controller_phuc = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'FL_hip_controller_phuc'],
+        output='screen'
+    )
+
+
     robot_state_pub_node = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
         output="both",
         parameters=[robot_description],
     )
+
+    # this is just for sliders to control the joints
+    joint_state_publisher_gui = Node(
+        package='joint_state_publisher_gui',
+        executable='joint_state_publisher_gui',
+        output='screen',
+    )
+
     rviz_node = Node(
         package="rviz2",
         executable="rviz2",
@@ -155,6 +181,8 @@ def generate_launch_description():
         arguments=[robot_controller, "-c", "/controller_manager"],
         # arguments=["robot_controller","--param-file", robot_controllers],
     )
+
+    #################################### HANDLE DELAY TO KEEP CORRECT ORDER WHEN WE LAUNCH ##################################
 
     # Delay rviz start after `joint_state_broadcaster`
     delay_rviz_after_joint_state_broadcaster_spawner = RegisterEventHandler(
@@ -181,14 +209,40 @@ def generate_launch_description():
     )
 
     nodes = [
-        gazebo,
-        spawn_entity,
-        control_node,
         robot_state_pub_node,
-        joint_state_broadcaster_spawner,
-        delay_rviz_after_joint_state_broadcaster_spawner,
-        delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
-        # jsp,
+        TimerAction(
+            period=2.0,
+            actions=[gazebo],
+        ),
+
+        TimerAction(
+            period=3.0,
+            actions=[spawn_entity],
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=spawn_entity,
+                on_exit=[control_node],
+            )
+        ),
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=control_node,
+                on_exit=[joint_state_broadcaster_spawner],
+            )
+        ),
+        # RegisterEventHandler(
+        # event_handler=OnProcessExit(
+        #     target_action=joint_state_broadcaster_spawner,
+        #     on_exit=[rviz_node],
+        # )
+        # ),
+        RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=joint_state_broadcaster_spawner,
+            on_exit=[robot_controller_spawner],
+            )
+        ),
     ]
 
     return LaunchDescription(declared_arguments + nodes)

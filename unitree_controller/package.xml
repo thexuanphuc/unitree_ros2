@@ -26,7 +26,7 @@
   <exec_depend>force_torque_sensor_broadcaster</exec_depend>
 
   <exec_depend>unitree_gazebo</exec_depend>
-  <exec_depend>gazebo_ros2_control</exec_depend>
+  <depend>gazebo_ros2_control</depend>
   <exec_depend>gazebo_ros</exec_depend>
 
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
