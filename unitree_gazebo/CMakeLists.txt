@@ -22,13 +22,16 @@ find_package(gazebo_dev REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(gazebo_ros2_control REQUIRED)
-find_package(unitree_hardware REQUIRED)
+find_package(unitree_hardware REQUIRED) # we need this for Kp, Kd (in PD controller, most probably) in hardware_interface
 
+# compile
 add_library(unitree_gazebo_hardware_plugin SHARED
   src/unitree_gazebo_system.cpp
 )
 target_include_directories(unitree_gazebo_hardware_plugin
-  PRIVATE include
+  PRIVATE 
+  include
+  ${unitree_hardware_INCLUDE_DIRS}
 )
 ament_target_dependencies(unitree_gazebo_hardware_plugin
   angles
@@ -49,6 +52,10 @@ install(TARGETS
   RUNTIME DESTINATION bin
 )
 
+install(
+  DIRECTORY include/
+  DESTINATION include/
+)
 ament_export_include_directories(
   include
 )
@@ -67,6 +74,10 @@ if(BUILD_TESTING)
   #set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+install(FILES unitree_gazebo_hardware_plugin.xml
+  DESTINATION share/${PROJECT_NAME}
+)
 
 pluginlib_export_plugin_description_file(gazebo_ros2_control unitree_gazebo_hardware_plugin.xml)
 
