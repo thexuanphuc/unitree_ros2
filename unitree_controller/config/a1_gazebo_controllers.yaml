@@ -2,29 +2,28 @@ controller_manager:
   ros__parameters:
     update_rate: 400 # Hz
 
-    joint_state_broadcaster:
+    joint_state_broadcaster_phuc:
       type: joint_state_broadcaster/JointStateBroadcaster
 
     imu_sensor_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
 
-    FL_foot_force_sensor_broadcaster:
-      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+    # FL_foot_force_sensor_broadcaster:
+    #   type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
-    FR_foot_force_sensor_broadcaster:
-      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+    # FR_foot_force_sensor_broadcaster:
+    #   type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
-    RL_foot_force_sensor_broadcaster:
-      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+    # RL_foot_force_sensor_broadcaster:
+    #   type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
-    RR_foot_force_sensor_broadcaster:
-      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
+    # RR_foot_force_sensor_broadcaster:
+    #   type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
-    unitree_controller:
+    unitree_controller_phuc:
       type: unitree_controller/UnitreeController
 
-
-joint_state_broadcaster:
+joint_state_broadcaster_phuc:
   ros__parameters:
     joints:
       - FL_hip_joint 
@@ -73,9 +72,10 @@ RR_foot_force_sensor_broadcaster:
     sensor_name: RR_foot_force_sensor
     interface_names.force.z: RR_foot_force_sensor/force.z
 
-unitree_controller:
+# now we need to specify all the parameter related to the controller (which will be loaded inside unitree_gazebo or unitree_hardware) 
+unitree_controller_phuc:
   ros__parameters:
-    control_rate: 400.0 # Hz
+    control_rate: 400 # Hz
     # interfaces
     joints:
       - FL_hip_joint 
@@ -92,9 +92,8 @@ unitree_controller:
       - RR_calf_joint
     sensors:
       - imu_sensor
-      - FL_foot_force_sensor
-      - FR_foot_force_sensor
-      - RL_foot_force_sensor
-      - RR_foot_force_sensor
+      # - FL_foot_force_sensor
+      # - FR_foot_force_sensor
+      # - RL_foot_force_sensor
+      # - RR_foot_force_sensor
     
- 
