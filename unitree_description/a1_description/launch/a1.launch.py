@@ -154,4 +154,4 @@
 #         ]
 #     ]
 
-    return LaunchDescription([rsp, jsp, gazebo, spawn_entity, controller_manager, log_info] + load_controllers)
+#     return LaunchDescription([rsp, jsp, gazebo, spawn_entity, controller_manager, log_info] + load_controllers)
