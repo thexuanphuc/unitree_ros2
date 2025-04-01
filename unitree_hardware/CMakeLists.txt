@@ -15,8 +15,6 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# set(lcm_DIR "/usr/lib/cmake/lcm")
-# set(gazebo_ros2_control_DIR "/usr/share/gazebo_ros2_control/cmake")
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(hardware_interface REQUIRED)
@@ -32,39 +30,41 @@ set_target_properties(
 )
 
 # compile
-add_library(${PROJECT_NAME} SHARED
+add_library(unitree_hardware_aida_plugin SHARED
   src/unitree_hardware.cpp
 )
-target_include_directories(${PROJECT_NAME} PRIVATE
+target_include_directories(unitree_hardware_aida_plugin PRIVATE
   include
 )
+
+ament_target_dependencies(unitree_hardware_aida_plugin
+  hardware_interface
+  pluginlib
+  rclcpp
+)
+
 target_link_libraries(
-  ${PROJECT_NAME}
-  PRIVATE
-  ${hardware_interface_LIBRARIES}
-  ${pluginlib_LIBRARIES}
-  ${rclcpp_LIBRARIES}
+  unitree_hardware_aida_plugin
   lcm
   unitree_legged_sdk_amd64
 )
-target_include_directories(
-  ${PROJECT_NAME}
-  PRIVATE
-  ${hardware_interface_INCLUDE_DIRS}
-  ${pluginlib_INCLUDE_DIRS}
-  ${rclcpp_INCLUDE_DIRS}
+
+
+pluginlib_export_plugin_description_file(hardware_interface unitree_hardware_aida_plugin.xml)
+
+install(FILES unitree_hardware_aida_plugin.xml
+  DESTINATION share/${PROJECT_NAME}
 )
 
-pluginlib_export_plugin_description_file(hardware_interface unitree_hardware.xml)
 
 # install
 install(
-  TARGETS ${PROJECT_NAME}
+  TARGETS unitree_hardware_aida_plugin
   DESTINATION lib
 )
 install(
   DIRECTORY include/
-  DESTINATION include
+  DESTINATION include/
 )
 
 ## exports
@@ -72,7 +72,7 @@ ament_export_include_directories(
   include
 )
 ament_export_libraries(
-  ${PROJECT_NAME}
+  unitree_hardware_aida_plugin
 )
 ament_export_dependencies(
   hardware_interface
@@ -84,11 +84,11 @@ if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
   # comment the line when a copyright and license is added to all source files
-  set(ament_cmake_copyright_FOUND TRUE)
+  # set(ament_cmake_copyright_FOUND TRUE)
   # the following line skips cpplint (only works in a git repo)
   # comment the line when this package is in a git repo and when
   # a copyright and license is added to all source files
-  set(ament_cmake_cpplint_FOUND TRUE)
+  # set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
 
