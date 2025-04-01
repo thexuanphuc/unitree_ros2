@@ -50,7 +50,6 @@ UnitreeControllerInterface::command_interface_configuration() const
                                                                    unitree_hardware::HW_IF_POSITION_GAIN,
                                                                    unitree_hardware::HW_IF_VELOCITY_GAIN};
   
-  RCLCPP_INFO(get_node()->get_logger(), "joint_command_interface_types finished ");
   controller_interface::InterfaceConfiguration conf;
   conf.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   conf.names.reserve(joint_names.size() * joint_command_interface_types.size()); // Joint commands
@@ -58,7 +57,7 @@ UnitreeControllerInterface::command_interface_configuration() const
   {
     for (const auto & interface_type : joint_command_interface_types)
     {
-      // RCLCPP_INFO(get_node()->get_logger(), "########### binding joint_name: %s, interface_type: %s", joint_name.c_str(), interface_type.c_str());
+      // RCLCPP_INFO(get_node()->get_logger(), " binding joint_name: %s, interface_type: %s", joint_name.c_str(), interface_type.c_str());
       conf.names.push_back(joint_name + "/" + interface_type);
     }
   }
@@ -112,6 +111,9 @@ UnitreeControllerInterface::state_interface_configuration() const
 controller_interface::return_type UnitreeControllerInterface::update(
     const rclcpp::Time & time, const rclcpp::Duration & period) 
 { 
+
+  // RCLCPP_INFO(get_node()->get_logger(), "UnitreeControllerInterface::update() called, take info from hardware interface -> send to unitree_controller");
+
   if (get_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE)
   {
     return controller_interface::return_type::OK;
