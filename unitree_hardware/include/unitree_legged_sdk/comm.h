@@ -12,6 +12,7 @@ namespace UNITREE_LEGGED_SDK
 
 	constexpr int HIGHLEVEL = 0x00;
 	constexpr int LOWLEVEL  = 0xff;
+	constexpr int BACKFLIPLEVEL  = 0xf0;
 	constexpr double PosStopF = (2.146E+9f);
 	constexpr double VelStopF = (16000.0f);
 

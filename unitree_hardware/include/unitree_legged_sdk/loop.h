@@ -14,6 +14,8 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS // to depricate warming
+
 namespace UNITREE_LEGGED_SDK 
 {
 
