@@ -106,26 +106,12 @@ def generate_launch_description():
     # robot_description = {'robot_description': Command(['xacro ', xacro_file, ' use_gazebo:=true DEBUG:=false'])}
 
 
-    #  fix xacro file
-    # a1_description_path = os.path.join(
-    #     get_package_share_directory('a1_description'))
-    # xacro_file = os.path.join(a1_description_path, 'xacro', 'robot.xacro')
-    # robot_description = {'robot_description': Command(['xacro ', xacro_file, ' use_gazebo:=true DEBUG:=false'])}
-
-
     robot_controllers = PathJoinSubstitution(
         [FindPackageShare(controllers_config_package), controllers_config_file]
     )
     rviz_config_file = PathJoinSubstitution(
         [FindPackageShare(rviz_config_package), rviz_config_file]
     )
-    
-    # this is for sliders to control the joints
-    # jsp = Node(
-    #     package='joint_state_publisher_gui',
-    #     executable='joint_state_publisher_gui',
-    #     output='screen',
-    # )
 
 
     #################################### DEFINE NODE ##################################
