@@ -26,7 +26,7 @@
   <exec_depend>force_torque_sensor_broadcaster</exec_depend>
 
   <exec_depend>unitree_gazebo</exec_depend>
-  <exec_depend>gazebo_ros2_control</exec_depend>
+  <depend>gazebo_ros2_control</depend>
   <exec_depend>gazebo_ros</exec_depend>
 
   <buildtool_depend>eigen3_cmake_module</buildtool_depend>
@@ -36,7 +36,11 @@
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
-
+  <test_depend>ament_add_gmock</test_depend>
+  <test_depend>controller_manager</test_depend>
+  <test_depend>hardware_interface</test_depend>
+  <test_depend>ros2_control_test_assets</test_depend>
+  <depend>std_msgs</depend>
   <export>
     <build_type>ament_cmake</build_type>
   </export>

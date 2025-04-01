@@ -25,6 +25,7 @@ UnitreeControllerInterface::UnitreeControllerInterface()
 
 controller_interface::CallbackReturn UnitreeControllerInterface::on_init()
 {
+  RCLCPP_INFO(get_node()->get_logger(), "UnitreeControllerInterface::on_init() is called");
   try 
   {
     declare_parameters();
@@ -39,12 +40,16 @@ controller_interface::CallbackReturn UnitreeControllerInterface::on_init()
 controller_interface::InterfaceConfiguration 
 UnitreeControllerInterface::command_interface_configuration() const
 {
+  RCLCPP_INFO(get_node()->get_logger(), "command_interface_configuration() is called");
   const std::vector<std::string> joint_names = this->get_joint_names();
+  RCLCPP_INFO(get_node()->get_logger(), "this->get_joint_names() finished ");
+
   const std::vector<std::string> joint_command_interface_types = { hardware_interface::HW_IF_POSITION,
                                                                    hardware_interface::HW_IF_VELOCITY,
                                                                    hardware_interface::HW_IF_EFFORT,
                                                                    unitree_hardware::HW_IF_POSITION_GAIN,
                                                                    unitree_hardware::HW_IF_VELOCITY_GAIN};
+  
   controller_interface::InterfaceConfiguration conf;
   conf.type = controller_interface::interface_configuration_type::INDIVIDUAL;
   conf.names.reserve(joint_names.size() * joint_command_interface_types.size()); // Joint commands
@@ -52,15 +57,20 @@ UnitreeControllerInterface::command_interface_configuration() const
   {
     for (const auto & interface_type : joint_command_interface_types)
     {
+      // RCLCPP_INFO(get_node()->get_logger(), " binding joint_name: %s, interface_type: %s", joint_name.c_str(), interface_type.c_str());
       conf.names.push_back(joint_name + "/" + interface_type);
     }
   }
+
+  RCLCPP_INFO(get_node()->get_logger(), "finish command_interface_configuration(), now return ");
+
   return conf;
 }
 
 controller_interface::InterfaceConfiguration
 UnitreeControllerInterface::state_interface_configuration() const
 {
+  RCLCPP_INFO(get_node()->get_logger(), "state_interface_configuration() called ");
   const std::vector<std::string> joint_names = this->get_joint_names();
   const std::vector<std::string> sensor_names = this->get_sensor_names();
   const std::vector<std::string> joint_state_interface_types = { hardware_interface::HW_IF_POSITION,
@@ -90,21 +100,25 @@ UnitreeControllerInterface::state_interface_configuration() const
   conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.x");
   conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.y");
   conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.z");
-  // Foot force sensor states
-  conf.names.push_back(sensor_names[1] + "/" + "force.z");
-  conf.names.push_back(sensor_names[2] + "/" + "force.z");
-  conf.names.push_back(sensor_names[3] + "/" + "force.z");
-  conf.names.push_back(sensor_names[4] + "/" + "force.z");
+  // // Foot force sensor states
+  // conf.names.push_back(sensor_names[1] + "/" + "force.z");
+  // conf.names.push_back(sensor_names[2] + "/" + "force.z");
+  // conf.names.push_back(sensor_names[3] + "/" + "force.z");
+  // conf.names.push_back(sensor_names[4] + "/" + "force.z");
   return conf;
 }
 
 controller_interface::return_type UnitreeControllerInterface::update(
     const rclcpp::Time & time, const rclcpp::Duration & period) 
-{
+{ 
+
+  // RCLCPP_INFO(get_node()->get_logger(), "UnitreeControllerInterface::update() called, take info from hardware interface -> send to unitree_controller");
+
   if (get_state().id() == lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE)
   {
     return controller_interface::return_type::OK;
   }
+  //  this is read() step
   // get joint state
   for (std::size_t i = 0 ; i < 12; ++i)
   {
@@ -125,16 +139,18 @@ controller_interface::return_type UnitreeControllerInterface::update(
   {
     states_.imu_linear_acceleration.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
   }
-  // get foor force sensor states 
-  for (std::size_t i = 0 ; i < 4; ++i) 
-  {
-    states_.foot_force_sensor.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
-  }
+  // // get foor force sensor states 
+  // for (std::size_t i = 0 ; i < 4; ++i) 
+  // {
+  //   states_.foot_force_sensor.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
+  // }
 
-  // update controller
-  update(time, period, states_, commands_);
+  // update controller, it will generate the control command
+  // this update() was implemented inside unitree controller
+  this->update(time, period, this->states_, this->commands_);
 
-  // set joint commands 
+
+  // set joint commands, as a write() step
   for (std::size_t i = 0 ; i < 12; ++i)
   {
     qJ_cmd_interface_[i].get().set_value(commands_.qJ_cmd.coeff(i));
@@ -154,14 +170,17 @@ UnitreeControllerInterface::on_configure(const rclcpp_lifecycle::State & previou
   auto ret = this->read_parameters();
   if (ret != controller_interface::CallbackReturn::SUCCESS)
   {
+    RCLCPP_INFO(get_node()->get_logger(), "Failed to read parameters in UnitreeControllerInterface::on_configure");
     return ret;
   }
+  RCLCPP_INFO(get_node()->get_logger(), "UnitreeControllerInterface::on_configure() completed successfully");
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
 controller_interface::CallbackReturn
 UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
 {
+  RCLCPP_INFO(get_node()->get_logger(), "UnitreeControllerInterface::on_activate() called");
   const std::vector<std::string> joint_names = this->get_joint_names();
   const std::vector<std::string> sensor_names = this->get_sensor_names();
   // Joint state interfaces
@@ -239,20 +258,20 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  // Foot force sensor interfaces
-  foot_force_sensor_interface_.clear();
-  for (std::size_t i = 0 ; i < 4; ++i) 
-  {
-    controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[i+1]}, 
-                                                 "force.z", foot_force_sensor_interface_);
-  }
-  if (foot_force_sensor_interface_.size() != 4) 
-  {
-    RCLCPP_ERROR(
-      get_node()->get_logger(), "Expected %u foot_force_interface, got %lu.", 
-      4, foot_force_sensor_interface_.size());
-    return controller_interface::CallbackReturn::ERROR;
-  }
+  // // Foot force sensor interfaces
+  // foot_force_sensor_interface_.clear();
+  // for (std::size_t i = 0 ; i < 4; ++i) 
+  // {
+  //   controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[i+1]}, 
+  //                                                "force.z", foot_force_sensor_interface_);
+  // }
+  // if (foot_force_sensor_interface_.size() != 4) 
+  // {
+  //   RCLCPP_ERROR(
+  //     get_node()->get_logger(), "Expected %u foot_force_interface, got %lu.", 
+  //     4, foot_force_sensor_interface_.size());
+  //   return controller_interface::CallbackReturn::ERROR;
+  // }
 
   // Joint command interfaces
   qJ_cmd_interface_.clear();

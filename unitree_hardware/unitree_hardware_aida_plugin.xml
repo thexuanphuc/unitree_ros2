@@ -1,4 +1,4 @@
-<library path="unitree_hardware">
+<library path="unitree_hardware_aida_plugin">
   <class name="unitree_hardware/UnitreeHardware"
          type="unitree_hardware::UnitreeHardware"
          base_class_type="hardware_interface::SystemInterface">

@@ -12,3 +12,4 @@ install requirements:
 
 ```bash
 bash unitree_controller/script/install_requirement.sh
+```

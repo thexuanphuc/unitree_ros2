@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, RegisterEventHandler, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, RegisterEventHandler, IncludeLaunchDescription, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
@@ -10,9 +10,11 @@ import os
 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-
+from launch_ros.descriptions import ParameterValue
 
 def generate_launch_description():
+    #################################### CONFIG ##################################
+
     # Declare arguments
     declared_arguments = []
     declared_arguments.append(
@@ -96,7 +98,7 @@ def generate_launch_description():
             " ",
         ]
     )
-    robot_description = {"robot_description": robot_description_content}
+    robot_description = {"robot_description": ParameterValue(robot_description_content, value_type=str)}
 
     robot_controllers = PathJoinSubstitution(
         [FindPackageShare(controllers_config_package), controllers_config_file]
@@ -105,16 +107,19 @@ def generate_launch_description():
         [FindPackageShare(rviz_config_package), rviz_config_file]
     )
 
+    #################################### DEFINE NODE ##################################
+
+
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
             get_package_share_directory('gazebo_ros'), 'launch'), 
             '/gazebo.launch.py']), 
-        launch_arguments = {'pause': 'false'}.items(),
+        launch_arguments = {"verbose": "true", 'pause': 'false'}.items(),
     )
     spawn_entity = Node(
         package='gazebo_ros', 
         executable='spawn_entity.py', 
-        arguments=['-topic', 'robot_description', '-entity', 'a1_phuc', 
+        arguments=['-topic', 'robot_description', '-entity', 'a1_aida', 
                    '-x', '0', '-y', '0', '-z', '0.5'],
                 #    '-x', '0', '-y', '0', '-z', '0.5', '-unpause'],
         output='screen',
@@ -141,42 +146,56 @@ def generate_launch_description():
         condition=IfCondition(start_rviz),
     )
 
-    joint_state_broadcaster_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+    # it is working this way, can we use this to load the controller
+    #  load the state broadcaster, the name is controller but it was broadcaster only
+    load_joint_state_broadcaster_aida = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'joint_state_broadcaster_aida'],
+        output='screen'
     )
 
-    robot_controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=[robot_controller, "-c", "/controller_manager"],
+    # load the controller for joint
+    load_unitree_controller_aida = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'unitree_controller_aida'],
+        output='screen'
     )
+
+    #################################### HANDLE TIMING WHILE SPAWNING ##################################
 
     # Delay rviz start after `joint_state_broadcaster`
     delay_rviz_after_joint_state_broadcaster_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=joint_state_broadcaster_spawner,
+            target_action=load_joint_state_broadcaster_aida,
             on_exit=[rviz_node],
         )
     )
 
-    # Delay start of robot_controller after `joint_state_broadcaster`
-    delay_robot_controller_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
+    delay_joint_state_broadcaster_spawner_after_spawn_entity = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=joint_state_broadcaster_spawner,
-            on_exit=[robot_controller_spawner],
+            target_action=spawn_entity,
+            on_exit=[load_joint_state_broadcaster_aida],
         )
     )
+
+    # Delay start of robot_controller after `joint_state_broadcaster`
+    delay_joint_state_broadcaster_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
+        event_handler=OnProcessExit(
+            target_action=load_joint_state_broadcaster_aida,
+            on_exit=[load_unitree_controller_aida],
+        )
+    )
+
+    #################################### COMBINE AND EXECUTE ##################################
 
     nodes = [
         gazebo,
         spawn_entity,
         control_node,
         robot_state_pub_node,
-        joint_state_broadcaster_spawner,
-        delay_rviz_after_joint_state_broadcaster_spawner,
-        delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
+        delay_joint_state_broadcaster_spawner_after_spawn_entity,
+        delay_joint_state_broadcaster_spawner_after_joint_state_broadcaster_spawner,
+        # delay_rviz_after_joint_state_broadcaster_spawner,
     ]
 
     return LaunchDescription(declared_arguments + nodes)

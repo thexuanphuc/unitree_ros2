@@ -32,8 +32,8 @@ private:
   std::vector<std::string> get_sensor_names() const override;
 
   controller_interface::return_type update(
-    const rclcpp::Time & time, const rclcpp::Duration & period,
-    const UnitreeStates & states, UnitreeCommands & commands) override;
+  const rclcpp::Time & time, const rclcpp::Duration & period,
+  const UnitreeStates & states, UnitreeCommands & commands) override;
 
   // interfaces
   std::vector<std::string> joint_names_, sensor_names_;
@@ -44,7 +44,7 @@ private:
   // Runtime controllers 
   ControlMode control_mode_;
   PDController zero_torque_controller_, standing_up_controller_, sitting_down_controller_;
-
+  int control_mode_phuc_count = 0;
   // Services
   rclcpp::Service<unitree_msgs::srv::SetControlMode>::SharedPtr set_contro_mode_srv_;
   realtime_tools::RealtimeBuffer<ControlMode> control_mode_rt_buffer_;

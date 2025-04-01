@@ -45,15 +45,15 @@
                 <gaussianNoise>0.0</gaussianNoise>
                 <xyzOffset>0 0 0</xyzOffset>
                 <rpyOffset>0 0 0</rpyOffset>
-                <frameName>imu_link</frameName>
+                <frame_name>imu_link</frame_name>
                 <initial_orientation_as_reference>false</initial_orientation_as_reference>
             </plugin>
             <pose>0 0 0 0 0 0</pose>
         </sensor>
     </gazebo>
 
-    <!-- Foot contacts. -->
-    <!-- <gazebo reference="FR_calf">
+    <!-- Foot contacts.
+    <gazebo reference="FR_calf">
         <sensor name="FR_foot_contact" type="contact">
         <update_rate>100</update_rate>
         <plugin name="contactPlugin" filename="libunitreeFootContactPlugin.so"/>

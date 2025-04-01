@@ -36,14 +36,17 @@ UnitreeHardware::UnitreeHardware()
 hardware_interface::CallbackReturn UnitreeHardware::on_init(
   const hardware_interface::HardwareInfo & info)
 {
-  if (
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "UnitreeHardware::on_init() start ##############3");
+  if ( 
+  // this call to hardware_interface::SystemInterface::on_init(info)
+  //  will auto create the info_ object as alias of info
+  //  take and check info from robot_description/
     hardware_interface::SystemInterface::on_init(info) != 
-    hardware_interface::CallbackReturn::SUCCESS) 
+    hardware_interface::CallbackReturn::SUCCESS)
   {
     return hardware_interface::CallbackReturn::ERROR;
   }
-  command_.levelFlag = UNITREE_LEGGED_SDK::LOWLEVEL;
-  udp_.InitCmdData(command_);
+
   // Joint states
   qJ_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   dqJ_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
@@ -69,6 +72,9 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
       "Number of joint is %zu. 12 expected.", info_.joints.size());
     return hardware_interface::CallbackReturn::ERROR;
   }
+  
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware_phuc"), "receive 12 joints from ros2_control.xacro #################");
+
   for (const hardware_interface::ComponentInfo & joint : info_.joints)
   {
     // check joint state interfaces
@@ -232,12 +238,18 @@ hardware_interface::CallbackReturn UnitreeHardware::on_init(
     }
   }
 
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "UnitreeHardware::on_init() end, succefull pass all checking, data from xacro #################");
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
 std::vector<hardware_interface::StateInterface>
 UnitreeHardware::export_state_interfaces()
 {
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "UnitreeHardware::export_state_interfaces start");
+  // This function will take normal number and bind them to the state_interfaces, then send that state_interfaces into ROS2 high level
+  // But where does the data come from?
+  // The data comes from the this->udp_ object, which is a UDP connection to the robot, each time we call udp, assign value into these number
+
   std::vector<hardware_interface::StateInterface> state_interfaces;
   // Joint state
   for (std::size_t i = 0; i < 12; i++)
@@ -285,9 +297,11 @@ UnitreeHardware::export_state_interfaces()
 std::vector<hardware_interface::CommandInterface>
 UnitreeHardware::export_command_interfaces()
 {
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "UnitreeHardware::export_command_interfaces start");
+  // This function will take command from command_interfaces (high level) then assign to the normal number)
+  // Then the normal number will be sent to the robot through this->udp_ object in write() function
   std::vector<hardware_interface::CommandInterface> command_interfaces;
-  for (std::size_t i = 0; i < 12; i++)
-  {
+  for (std::size_t i = 0; i < 12; i++){
     command_interfaces.emplace_back(hardware_interface::CommandInterface(
       info_.joints[i].name, hardware_interface::HW_IF_POSITION, &qJ_cmd_[i]));
     command_interfaces.emplace_back(hardware_interface::CommandInterface(
@@ -306,7 +320,7 @@ hardware_interface::CallbackReturn UnitreeHardware::on_activate(
   const rclcpp_lifecycle::State & /*previous_state*/) 
 {
   RCLCPP_INFO(
-    rclcpp::get_logger("UnitreeHardware"), "Starting... please wait...");
+    rclcpp::get_logger("UnitreeHardware"), "Starting in UnitreeHardware::on_activate() please wait ################");
 
   // Set some default values
   for (std::size_t i = 0; i < 12; i++)
@@ -373,8 +387,13 @@ hardware_interface::CallbackReturn UnitreeHardware::on_activate(
   }
 
   RCLCPP_INFO(
-    rclcpp::get_logger("UnitreeHardware"), "System successfully started!");
-
+    rclcpp::get_logger("UnitreeHardware"), "System initialzed UnitreeHardware::on_activate()  ###############");
+    RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "tried to bind the udp connection with  command_ ##############3");
+    // this will bind the command_ with this udp, may be move this into on configurate
+    command_.levelFlag = UNITREE_LEGGED_SDK::LOWLEVEL;
+    this->udp_.InitCmdData(command_);
+    RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "after binding the udp connection with  command_ ##############3");
+  
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
@@ -387,8 +406,10 @@ hardware_interface::CallbackReturn UnitreeHardware::on_deactivate(
 hardware_interface::return_type UnitreeHardware::read(
   const rclcpp::Time & /* time */, const rclcpp::Duration & /* period */)
 {
-  udp_.Recv();
-  udp_.GetRecv(state_);
+  // RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "inside UnitreeHardware::read() function ################ ");
+  this->udp_.Recv(); // save the data from low level to buffer
+  this->udp_.GetRecv(this->state_);
+
   // Joint state
   for (std::size_t i = 0; i < 12; i++)
   {
@@ -420,6 +441,7 @@ hardware_interface::return_type UnitreeHardware::read(
 hardware_interface::return_type UnitreeHardware::write(
   const rclcpp::Time &  /* time */, const rclcpp::Duration & /* period */)
 {
+  // RCLCPP_INFO(rclcpp::get_logger("UnitreeHardware"), "inside UnitreeHardware::write() function ################ ");
   for (std::size_t i = 0; i < 12; i++)
   {
     command_.motorCmd[joints_[i]].q   = static_cast<float>(qJ_cmd_[i]);
@@ -431,9 +453,10 @@ hardware_interface::return_type UnitreeHardware::write(
   // You can uncomment it for position protection
   // safety_.PositionProtect(command_, state_, 0.087);
   safety_.PositionLimit(command_);
-  safety_.PowerProtect(command_, state_, 8);
-  udp_.SetSend(command_);
-  udp_.Send();
+  safety_.PowerProtect(command_, state_, 2);
+
+  this->udp_.SetSend(command_);
+  this->udp_.Send();
   return hardware_interface::return_type::OK;
 }
 
