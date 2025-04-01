@@ -80,19 +80,28 @@ controller_interface::return_type UnitreeController::update(
     const rclcpp::Time & time, const rclcpp::Duration & period,
     const UnitreeStates & states, UnitreeCommands & commands) 
 {
-
+  RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, computed commands, ready to send");
   (void)period;
   (void)states;
   (void)time;
+
   // control_mode_ = *control_mode_rt_buffer_.readFromRT();
-  this->control_mode_phuc_count += 1;
-  if(this->control_mode_phuc_count >= 1000){
+  this->control_mode_phuc_count += 1; 
+  if(this->control_mode_phuc_count < 2000){
+    commands.qJ_cmd   = zero_torque_controller_.qJ_cmd();
+    commands.dqJ_cmd  = zero_torque_controller_.dqJ_cmd();
+    commands.tauJ_cmd = zero_torque_controller_.tauJ_cmd();
+    commands.Kp_cmd   = zero_torque_controller_.Kp_cmd();
+    commands.Kd_cmd   = zero_torque_controller_.Kd_cmd();
+  }
+  if(this->control_mode_phuc_count >= 2000){
     this->control_mode_phuc_count = 0;
   }
   
-  float alpha = 0.5 * (1.0 + std::sin(2.0 * M_PI * this->control_mode_phuc_count / 1000.0));  
+  float alpha = 0.5 * (1.0 + std::sin(2.0 * M_PI * this->control_mode_phuc_count / 2000));  
   // interpolate for position between 2 modes
-  commands.qJ_cmd   = (1.0 - alpha) * standing_up_controller_.qJ_cmd() + alpha * sitting_down_controller_.qJ_cmd();
+  commands.qJ_cmd   = (1.0 - alpha) * standing_up_controller_.qJ_cmd() + alpha * sitting_down_controller_.qJ_cmd();  
+  // commands.qJ_cmd   = zero_torque_controller_.qJ_cmd();
   commands.dqJ_cmd  = standing_up_controller_.dqJ_cmd();
   commands.tauJ_cmd = standing_up_controller_.tauJ_cmd();
   commands.Kp_cmd   = standing_up_controller_.Kp_cmd();
@@ -130,7 +139,6 @@ controller_interface::return_type UnitreeController::update(
   //     break;
   //   }
   //   default: {
-  //     RCLCPP_INFO(get_node()->get_logger(), "error in mode...############################");
   //     return controller_interface::return_type::ERROR;
   //     break;
   //   }
