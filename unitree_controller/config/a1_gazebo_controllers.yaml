@@ -2,7 +2,7 @@ controller_manager:
   ros__parameters:
     update_rate: 400 # Hz
 
-    joint_state_broadcaster_phuc:
+    joint_state_broadcaster_aida:
       type: joint_state_broadcaster/JointStateBroadcaster
 
     imu_sensor_broadcaster:
@@ -20,10 +20,10 @@ controller_manager:
     # RR_foot_force_sensor_broadcaster:
     #   type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
 
-    unitree_controller_phuc:
+    unitree_controller_aida:
       type: unitree_controller/UnitreeController
 
-joint_state_broadcaster_phuc:
+joint_state_broadcaster_aida:
   ros__parameters:
     joints:
       - FL_hip_joint 
@@ -73,7 +73,7 @@ RR_foot_force_sensor_broadcaster:
     interface_names.force.z: RR_foot_force_sensor/force.z
 
 # now we need to specify all the parameter related to the controller (which will be loaded inside unitree_gazebo or unitree_hardware) 
-unitree_controller_phuc:
+unitree_controller_aida:
   ros__parameters:
     control_rate: 400 # Hz
     # interfaces

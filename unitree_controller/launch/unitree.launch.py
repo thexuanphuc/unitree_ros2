@@ -150,16 +150,16 @@ def generate_launch_description():
     # )
     #  load the state broadcaster, the name is controller but it was broadcaster only
     
-    load_joint_state_broadcaster_phuc = ExecuteProcess(
+    load_joint_state_broadcaster_aida = ExecuteProcess(
         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
-             'joint_state_broadcaster_phuc'],
+             'joint_state_broadcaster_aida'],
         output='screen'
     )
 
     # load the controller for joint
-    load_unitree_controller_phuc = ExecuteProcess(
+    load_unitree_controller_aida = ExecuteProcess(
         cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
-             'unitree_controller_phuc'],
+             'unitree_controller_aida'],
         output='screen'
     )
 
@@ -168,7 +168,7 @@ def generate_launch_description():
     # Delay rviz start after `joint_state_broadcaster`
     delay_rviz_after_joint_state_broadcaster_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=load_joint_state_broadcaster_phuc,
+            target_action=load_joint_state_broadcaster_aida,
             on_exit=[rviz_node],
         )
     )
@@ -176,8 +176,8 @@ def generate_launch_description():
     # Delay start of robot_controller after `joint_state_broadcaster`
     delay_joint_state_broadcaster_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=load_joint_state_broadcaster_phuc,
-            on_exit=[load_unitree_controller_phuc],
+            target_action=load_joint_state_broadcaster_aida,
+            on_exit=[load_unitree_controller_aida],
         )
     )
 
@@ -186,8 +186,8 @@ def generate_launch_description():
     nodes = [
         control_node,
         robot_state_pub_node,
-        load_joint_state_broadcaster_phuc,
-        # delay_rviz_after_joint_state_broadcaster_spawner,
+        load_joint_state_broadcaster_aida,
+        delay_rviz_after_joint_state_broadcaster_spawner,
         delay_joint_state_broadcaster_spawner_after_joint_state_broadcaster_spawner,
     ]
 
