@@ -1,14 +1,18 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, RegisterEventHandler
+from launch.actions import DeclareLaunchArgument, RegisterEventHandler, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
 
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+from launch_ros.descriptions import ParameterValue
 
 
 def generate_launch_description():
+
+    #################################### CONFIG ##################################
+
     # Declare arguments
     declared_arguments = []
     declared_arguments.append(
@@ -88,11 +92,12 @@ def generate_launch_description():
             'false',
             " ",
             "DEBUG:=",
-            'false',
+            'true',
             " ",
         ]
     )
-    robot_description = {"robot_description": robot_description_content}
+
+    robot_description = {"robot_description": ParameterValue(robot_description_content, value_type=str)}
 
     #  fix xacro file
     # a1_description_path = os.path.join(
@@ -107,7 +112,10 @@ def generate_launch_description():
     rviz_config_file = PathJoinSubstitution(
         [FindPackageShare(rviz_config_package), rviz_config_file]
     )
-    
+
+
+    #################################### DEFINE NODE ##################################
+
     control_node = Node(
         package="controller_manager",
         executable="ros2_control_node",
@@ -129,40 +137,58 @@ def generate_launch_description():
         condition=IfCondition(start_rviz),
     )
 
-    joint_state_broadcaster_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+    # joint_state_broadcaster_spawner = Node(
+    #     package="controller_manager",
+    #     executable="spawner",
+    #     arguments=["joint_state_broadcaster", "--controller-manager", "/controller_manager"],
+    # )
+
+    # robot_controller_spawner = Node(
+    #     package="controller_manager",
+    #     executable="spawner",
+    #     arguments=[robot_controller, "-c", "/controller_manager"],
+    # )
+    #  load the state broadcaster, the name is controller but it was broadcaster only
+    
+    load_joint_state_broadcaster_phuc = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'joint_state_broadcaster_phuc'],
+        output='screen'
     )
 
-    robot_controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=[robot_controller, "-c", "/controller_manager"],
+    # load the controller for joint
+    load_unitree_controller_phuc = ExecuteProcess(
+        cmd=['ros2', 'control', 'load_controller', '--set-state', 'active',
+             'unitree_controller_phuc'],
+        output='screen'
     )
+
+    #################################### HANDLE TIMING WHILE SPAWNING ##################################
 
     # Delay rviz start after `joint_state_broadcaster`
     delay_rviz_after_joint_state_broadcaster_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=joint_state_broadcaster_spawner,
+            target_action=load_joint_state_broadcaster_phuc,
             on_exit=[rviz_node],
         )
     )
 
     # Delay start of robot_controller after `joint_state_broadcaster`
-    delay_robot_controller_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
+    delay_joint_state_broadcaster_spawner_after_joint_state_broadcaster_spawner = RegisterEventHandler(
         event_handler=OnProcessExit(
-            target_action=joint_state_broadcaster_spawner,
-            on_exit=[robot_controller_spawner],
+            target_action=load_joint_state_broadcaster_phuc,
+            on_exit=[load_unitree_controller_phuc],
         )
     )
+
+    #################################### COMBINE AND EXECUTE ##################################
 
     nodes = [
         control_node,
         robot_state_pub_node,
-        joint_state_broadcaster_spawner,
-        delay_rviz_after_joint_state_broadcaster_spawner,
-        delay_robot_controller_spawner_after_joint_state_broadcaster_spawner,
+        load_joint_state_broadcaster_phuc,
+        # delay_rviz_after_joint_state_broadcaster_spawner,
+        delay_joint_state_broadcaster_spawner_after_joint_state_broadcaster_spawner,
     ]
 
     return LaunchDescription(declared_arguments + nodes)
