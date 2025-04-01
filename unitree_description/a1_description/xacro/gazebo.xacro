@@ -52,8 +52,8 @@
         </sensor>
     </gazebo>
 
-    <!-- Foot contacts. -->
-    <!-- <gazebo reference="FR_calf">
+    <!-- Foot contacts.
+    <gazebo reference="FR_calf">
         <sensor name="FR_foot_contact" type="contact">
         <update_rate>100</update_rate>
         <plugin name="contactPlugin" filename="libunitreeFootContactPlugin.so"/>
