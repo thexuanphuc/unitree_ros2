@@ -1,0 +1,6 @@
+[submodule "gazebo_ros2_control"]
+	path = gazebo_ros2_control
+	url = git@github.com:ros-controls/gazebo_ros2_control.git
+[submodule "lcm"]
+	path = lcm
+	url = git@github.com:lcm-proj/lcm.git
