@@ -1,15 +1,33 @@
 # unitree_ros2
-An unofficial ROS2 package for Unitree's quadruped robots.
+An unofficial ROS 2 package for Unitree's quadruped robots.
 
-# Requirements
-- Ubuntu 22.04 LTS and ROS2 Humble
-- [lcm](https://lcm-proj.github.io/) (for the communication)
-- [Eigen3](https://eigen.tuxfamily.org/index.php?title=Main_Page) (for state estimation and whole-body control)
-- [Pinocchio](https://github.com/stack-of-tasks/pinocchio) (for state estimation and whole-body control)
+Tested on **Ubuntu 22.04 LTS** with **ROS 2 Humble**.
 
+## Installation
 
-install requirements:
+### Local Installation
+
+Install the required dependencies by running:
 
 ```bash
 bash unitree_controller/script/install_requirement.sh
 ```
+
+### Docker
+
+#### Build the Docker Image
+
+```bash
+docker build . -t unitree_ros2
+```
+
+#### Run the Docker Container
+
+```bash
+docker compose up unitree_ros2
+```
+
+### Notes
+
+- TODO: check communication between the Docker container and the real robot.
+
