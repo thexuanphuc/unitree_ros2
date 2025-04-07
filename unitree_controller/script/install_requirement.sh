@@ -1,31 +1,31 @@
 #!/bin/bash
 
 # Update package list
-sudo apt update
+sudo apt update -y
 
 # Install build dependencies
-sudo apt install ros-humble-ament-cmake
-sudo apt install ros-humble-eigen3-cmake-module
-sudo apt install libeigen3-dev
-sudo apt install liblcm-dev
+sudo apt install ros-humble-ament-cmake -y
+sudo apt install ros-humble-eigen3-cmake-module -y
+sudo apt install libeigen3-dev -y
+sudo apt install liblcm-dev -y
 
 # Install runtime dependencies
-sudo apt install ros-humble-pluginlib
-sudo apt install ros-humble-realtime-tools
-sudo apt install ros-humble-controller-interface
-sudo apt install ros-humble-hardware-interface
-sudo apt install ros-humble-rclcpp
-sudo apt install ros-humble-rclcpp-lifecycle
-sudo apt install ros-humble-geometry-msgs
+sudo apt install ros-humble-pluginlib -y
+sudo apt install ros-humble-realtime-tools -y
+sudo apt install ros-humble-controller-interface -y
+sudo apt install ros-humble-hardware-interface -y
+sudo apt install ros-humble-rclcpp -y
+sudo apt install ros-humble-rclcpp-lifecycle -y
+sudo apt install ros-humble-geometry-msgs -y
 
 # Install execution dependencies
-sudo apt install ros-humble-xacro
-sudo apt install ros-humble-joint-state-broadcaster
-sudo apt install ros-humble-imu-sensor-broadcaster
-sudo apt install ros-humble-force-torque-sensor-broadcaster
-sudo apt install ros-humble-gazebo-ros
-sudo apt install ros-humble-gazebo-ros2-control
-sudo apt install ros-humble-controller-manager
+sudo apt install ros-humble-xacro -y
+sudo apt install ros-humble-joint-state-broadcaster -y
+sudo apt install ros-humble-imu-sensor-broadcaster -y
+sudo apt install ros-humble-force-torque-sensor-broadcaster -y
+sudo apt install ros-humble-gazebo-ros -y
+sudo apt install ros-humble-gazebo-ros2-control -y
+sudo apt install ros-humble-controller-manager -y
 # Install test dependencies
-sudo apt install ros-humble-ament-lint-auto
-sudo apt install ros-humble-ament-lint-common
+sudo apt install ros-humble-ament-lint-auto -y
+sudo apt install ros-humble-ament-lint-common -y
