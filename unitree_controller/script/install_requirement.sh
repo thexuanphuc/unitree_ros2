@@ -16,6 +16,8 @@ sudo apt install ros-humble-controller-interface -y
 sudo apt install ros-humble-hardware-interface -y
 sudo apt install ros-humble-rclcpp -y
 sudo apt install ros-humble-rclcpp-lifecycle -y
+sudo apt install ros-humble-ros2-control -y
+sudo apt install ros-humble-ros2-controllers -y
 sudo apt install ros-humble-geometry-msgs -y
 
 # Install execution dependencies
