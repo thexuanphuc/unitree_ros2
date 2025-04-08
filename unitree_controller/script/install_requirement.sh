@@ -16,6 +16,8 @@ sudo apt install ros-humble-controller-interface -y
 sudo apt install ros-humble-hardware-interface -y
 sudo apt install ros-humble-rclcpp -y
 sudo apt install ros-humble-rclcpp-lifecycle -y
+sudo apt install ros-humble-ros2-control -y
+sudo apt install ros-humble-ros2-controllers -y
 sudo apt install ros-humble-geometry-msgs -y
 
 # Install execution dependencies
@@ -26,6 +28,9 @@ sudo apt install ros-humble-force-torque-sensor-broadcaster -y
 sudo apt install ros-humble-gazebo-ros -y
 sudo apt install ros-humble-gazebo-ros2-control -y
 sudo apt install ros-humble-controller-manager -y
+sudo apt install ros-humble-gazebo-ros-pkgs -y
+sudo apt install ros-humble-gazebo-plugins -y
+
 # Install test dependencies
 sudo apt install ros-humble-ament-lint-auto -y
 sudo apt install ros-humble-ament-lint-common -y

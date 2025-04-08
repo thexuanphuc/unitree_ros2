@@ -1,0 +1,27 @@
+version: '3'
+services:
+  a1:
+    container_name: unitree_ros2
+    image: unitree_ros2:latest
+    environment:
+      - DISPLAY=$DISPLAY
+      # - XDG_RUNTIME_DIR=/run/user/$(id -u)
+
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # - ~/.Xauthority:/root/.Xauthority
+      # - /run/user/$(id -u)/wayland-0:/run/user/$(id -u)/wayland-0
+
+    working_dir: /home/ros2_ws
+    command: >
+      /bin/bash -c "
+      echo 'DISPLAY is set to: $DISPLAY' &&
+      source /home/ros2_ws/install/setup.bash &&
+      ros2 launch unitree_controller a1_gazebo.launch.py
+      "
+    networks:
+      - unitree_network
+
+networks:
+  unitree_network:
+    driver: bridge
