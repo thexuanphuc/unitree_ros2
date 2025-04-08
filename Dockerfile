@@ -35,6 +35,8 @@ RUN apt-get update && apt-get install -y \
     ros-${ROS_DISTRO}-rclcpp-lifecycle \
     ros-${ROS_DISTRO}-gazebo-ros \
     ros-${ROS_DISTRO}-gazebo-ros2-control \
+    ros-${ROS_DISTRO}-gazebo-ros-pkgs \
+    ros-${ROS_DISTRO}-gazebo-plugins \
     ros-${ROS_DISTRO}-geometry-msgs && \
     apt-get autoremove -y -qq && \
     rm -rf /var/lib/apt/lists/*
