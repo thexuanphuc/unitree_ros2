@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y \
     ros-${ROS_DISTRO}-realtime-tools \
     ros-${ROS_DISTRO}-ros2-control \
     ros-${ROS_DISTRO}-ros2-controllers  \
+    ros-${ROS_DISTRO}-controller-manager \
     ros-${ROS_DISTRO}-controller-interface \
     ros-${ROS_DISTRO}-hardware-interface \
     ros-${ROS_DISTRO}-rclcpp \
@@ -44,7 +45,7 @@ RUN apt-get update && apt-get install -y \
     ros-${ROS_DISTRO}-joint-state-broadcaster \
     ros-${ROS_DISTRO}-imu-sensor-broadcaster \
     ros-${ROS_DISTRO}-force-torque-sensor-broadcaster \
-    ros-${ROS_DISTRO}-controller-manager && \
+    ros-${ROS_DISTRO}-robot-state-publisher && \
     apt-get autoremove -y -qq && \
     rm -rf /var/lib/apt/lists/*
 
