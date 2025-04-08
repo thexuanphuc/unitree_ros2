@@ -18,13 +18,13 @@ bash unitree_controller/script/install_requirement.sh
 #### Build the Docker Image
 
 ```bash
-docker build . -t unitree_ros2
+docker build . -t unitree_ros2:latest
 ```
 
 #### Run the Docker Container
 
 ```bash
-docker compose up unitree_ros2
+docker compose up a1
 ```
 
 ### Notes
