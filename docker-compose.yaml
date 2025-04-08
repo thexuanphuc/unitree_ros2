@@ -4,9 +4,14 @@ services:
     container_name: unitree_ros2
     image: unitree_ros2:latest
     environment:
-      - DISPLAY=${DISPLAY:-:0}
+      # - DISPLAY=${DISPLAY:-:0}
+      # - XDG_RUNTIME_DIR=/run/user/$(id -u)
+
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      # - ~/.Xauthority:/root/.Xauthority
+      # - /run/user/$(id -u)/wayland-0:/run/user/$(id -u)/wayland-0
+
     working_dir: /home/ros2_ws
     command: >
       /bin/bash -c "
