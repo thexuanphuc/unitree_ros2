@@ -80,7 +80,7 @@ controller_interface::return_type UnitreeController::update(
     const rclcpp::Time & time, const rclcpp::Duration & period,
     const UnitreeStates & states, UnitreeCommands & commands) 
 {
-  RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, computed commands, ready to send");
+  RCLCPP_DEBUG(get_node()->get_logger(), "UnitreeController::update called, computed commands, ready to send");
   (void)period;
   (void)states;
   (void)time;
