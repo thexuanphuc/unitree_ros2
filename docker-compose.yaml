@@ -4,7 +4,7 @@ services:
     container_name: unitree_ros2
     image: unitree_ros2:latest
     environment:
-      # - DISPLAY=${DISPLAY:-:0}
+      - DISPLAY=$DISPLAY
       # - XDG_RUNTIME_DIR=/run/user/$(id -u)
 
     volumes:
