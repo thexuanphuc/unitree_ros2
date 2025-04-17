@@ -94,7 +94,7 @@ def generate_launch_description():
             'true',
             " ",
             "DEBUG:=",
-            'false',
+            'true',
             " ",
         ]
     )
