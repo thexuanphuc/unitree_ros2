@@ -1,0 +1,13 @@
+Starting >>> gazebo_ros2_control
+Starting >>> unitree_hardware
+Starting >>> unitree_msgs
+Finished <<< unitree_hardware [0.11s]
+Finished <<< gazebo_ros2_control [0.14s]
+Starting >>> unitree_gazebo
+Finished <<< unitree_gazebo [0.09s]
+Finished <<< unitree_msgs [0.45s]
+Starting >>> unitree_controller
+
+Summary: 4 packages finished [6.47s]
+  1 package failed: unitree_controller
+  1 package had stderr output: unitree_controller

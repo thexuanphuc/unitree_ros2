@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5...3.10)
+
+set(CMAKE_POLICY_WARNING_CMP0167 OFF)
 project(a1_description)
 
 # Default to C99

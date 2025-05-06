@@ -10,6 +10,9 @@
 #include "realtime_tools/realtime_buffer.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+// #include <xtensor/xarray.hpp>
+// #include <xtensor/xio.hpp>
+// #include <xtensor/xnpy.hpp>
 
 namespace unitree_controller
 {
@@ -23,6 +26,8 @@ public:
   UnitreeController();
 
 private:
+
+  std::vector<std::vector<double>> joint_trajectory_;
   void declare_parameters() override;
 
   controller_interface::CallbackReturn read_parameters() override;

@@ -1,3 +1,4 @@
+
 #include "unitree_controller/unitree_controller.hpp"
 
 #include "ament_index_cpp/get_package_share_directory.hpp"
@@ -61,7 +62,43 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
     RCLCPP_ERROR(get_node()->get_logger(), "'control_rate_' must be positive, got %lf.", control_rate_);
     return controller_interface::CallbackReturn::ERROR;
   }
+  // Load trajectory from JSON
+  try {
+    std::string pkg_share = ament_index_cpp::get_package_share_directory("unitree_controller");
+    std::string file_path = pkg_share + "/config/joint_trajectory.json";
+    std::ifstream file(file_path);
+    if (!file.is_open()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to open %s", file_path.c_str());
+      controller_interface::CallbackReturn::ERROR;
+    }
+    nlohmann::json json_data;
+    file >> json_data;
+    for (const auto & row : json_data) {
+      std::vector<double> joints;
+      for (const auto & value : row) {
+        joints.push_back(value.get<double>());
+      }
+      if (joints.size() != 3) {
+        RCLCPP_ERROR(get_node()->get_logger(), "Invalid row size in trajectory");
+        controller_interface::CallbackReturn::ERROR;
+      }
+      joint_trajectory_.push_back(joints);
+    }
 
+    // printout the trajectory
+    for (size_t i = 0; i < joint_trajectory_.size(); ++i) {
+      RCLCPP_INFO(get_node()->get_logger(), "Trajectory point %zu: [%f, %f, %f]", i, joint_trajectory_[i][0], joint_trajectory_[i][1], joint_trajectory_[i][2]);
+    }
+
+    RCLCPP_INFO(get_node()->get_logger(), "Loaded trajectory with %zu points", joint_trajectory_.size());
+    if (joint_trajectory_.size() != 101) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Expected 101 points, got %zu", joint_trajectory_.size());
+      controller_interface::CallbackReturn::ERROR;
+    }
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory: %s", e.what());
+    controller_interface::CallbackReturn::ERROR;
+  }
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -139,12 +176,12 @@ controller_interface::return_type UnitreeController::update(
   //     break;
   //   }
   //   default: {
-  //     return controller_interface::return_type::ERROR;
+  //     controller_interface::CallbackReturn::ERROR;
   //     break;
   //   }
   // }
   
-  return controller_interface::return_type::ERROR;
+  controller_interface::CallbackReturn::ERROR;
 }
 
 void UnitreeController::setControlModeCallback(const std::shared_ptr<unitree_msgs::srv::SetControlMode::Request> request,

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5...3.10)
 project(unitree_controller)
 
 # Default to C99
@@ -32,7 +32,15 @@ find_package(unitree_msgs REQUIRED)
 find_package(controller_manager REQUIRED)
 find_package(unitree_gazebo REQUIRED)
 find_package(std_msgs REQUIRED)
+# list(APPEND CMAKE_PREFIX_PATH "/opt/vcpkg/installed/x64-linux/share/xtensor")
+# find_package(xtensor CONFIG REQUIRED)
+find_package(nlohmann_json REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
+# target_link_libraries(${PROJECT_NAME}
+#   ${nlohmann_json_LIBRARIES}
+#   # ${ament_index_cpp_LIBRARIES}
+# )
 add_library(${PROJECT_NAME} SHARED
   src/unitree_controller_interface.cpp
   src/unitree_controller.cpp
@@ -57,6 +65,7 @@ ament_target_dependencies(${PROJECT_NAME}
   unitree_msgs
   controller_manager
   std_msgs
+  nlohmann_json
 )
 
 # Causes the visibility macros to use dllexport rather than dllimport,
@@ -122,6 +131,7 @@ ament_export_dependencies(
   controller_manager
   unitree_gazebo
   std_msgs
+  # xtensor
 )
 
 ament_package()
