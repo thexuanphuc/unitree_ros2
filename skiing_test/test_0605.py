@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 import scipy.optimize as opt
 import math
 import sys
+import json
 
 # -------------------------------
 # Configuration
@@ -204,7 +205,8 @@ def compute_leg_positions(q, effective_offset, robot, fix_hip=True):
         calf = R_x(q0) @ calf_local
         foot = ankle + calf
 
-        
+
+    # this is the real position in 3D, not the joint angle
     return hip, knee, ankle, foot
 
 # -------------------------------
@@ -427,7 +429,6 @@ def animate_mpc(joint_positions_FR, foot_traj_FR, trunk_dims, trunk_center,
                 static_positions_FL, static_positions_RR, static_positions_RL, board_top_z, link_masses):
     fig = plt.figure(figsize=(12,10))
     ax = fig.add_subplot(111, projection='3d')
-    print("the joint_positions_FR shape: ----------------------------------------", joint_positions_FR.shape)
     ax.set_box_aspect([1, 1, 1])
     ax.set_xlabel('X (m)')
     ax.set_ylabel('Y (m)')
@@ -726,18 +727,29 @@ def run_mpc_pushing():
     print("Initial FR configuration (for MPC):", q0_FR)
     p0_abs_FR = fk_numeric(q0_FR)
     
+
+    #  is this p_ref_arr is the foot trajectory, how to generate this one
     p_ref_arr = generate_trajectory(config["N"], config["step_length"], config["swing_height"],
                                     effective_hip_offset_FR, p0_abs_FR, desired_y)
     mpc = MPCController(robot, config, q0_FR)
     mpc.setup_problem(p_ref_arr, effective_hip_offset_FR, desired_y)
     q_sol_FR = mpc.solve()
+    
+    # # Convert numpy array to list
+    # q_sol_FR_list = q_sol_FR.tolist()
+
+    # # Save to JSON file
+    # with open("q_sol_FR.json", "w") as json_file:
+    #     json.dump(q_sol_FR_list, json_file)
+
+    # print("Saved q_sol_FR to q_sol_FR.json")
 
     joint_positions_FR = []
     foot_traj_FR = []
     for q in q_sol_FR:
-        # pos = [hip, knee, angle, foot]
+        # real position in 3D coordinates, not angle = [hip(of 3 legs), knee, angle, foot]
         pos = compute_leg_positions(q, effective_hip_offset_FR, robot, config["fix_hip"])
-        print("the output from compute_leg_positions is 3x4:", pos)
+        # print("coordinate (x,y,z) of  hip, knee, ankle, foot  ---------------->", pos)
         joint_positions_FR.append(pos)
         foot_traj_FR.append(pos[3])
     joint_positions_FR = np.array(joint_positions_FR)
@@ -748,7 +760,6 @@ def run_mpc_pushing():
     static_positions_RR = compute_leg_positions(q_static, effective_hip_offset_RR, robot, fix_hip=True)
     static_positions_RL = compute_leg_positions(q_static, effective_hip_offset_RL, robot, fix_hip=True)
 
-    print("the joint_positions_FR[0] -------------------------------", joint_positions_FR[0])
     print("Link lengths:")
     for leg, pos in zip(["FR", "FL", "RR", "RL"], [joint_positions_FR[0], static_positions_FL, static_positions_RR, static_positions_RL]):
         lk = np.linalg.norm(pos[1] - pos[0])
@@ -756,10 +767,10 @@ def run_mpc_pushing():
         lf = np.linalg.norm(pos[3] - pos[2])
         print(f"{leg}: Hip-Knee: {lk:.3f}, Knee-Ankle: {la:.3f}, Ankle-Foot: {lf:.3f}")
 
-    print("the joint_positions_FR -------------------------------- shape-", joint_positions_FR.shape)
     animate_mpc(joint_positions_FR, foot_traj_FR, robot.trunk_dims, trunk_center,
                 static_positions_FL, static_positions_RR, static_positions_RL, board_top_z, robot.link_masses)
 
+    return q_sol_FR
 # -------------------------------
 # com_transfering mode (trunk movement with fixed feet)
 # -------------------------------
@@ -864,6 +875,8 @@ def main():
         run_com_transfering()
     else:
         run_mpc_pushing()
+        # print("the joint_angle is -------------------------", joint_angle.shape)
+
 
 if __name__ == "__main__":
     main()
