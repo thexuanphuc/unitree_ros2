@@ -25,7 +25,7 @@ default_config = {
     "fix_hip": False,             # in MPC mode fix hip; for IK - don't fix q[0]
     "q0": [0.0, 2.5, -1],
     "w_pos": 10000.0,
-    "w_dq": 0.1,
+    "w_dq": 0.001,
     "w_smooth": 0.1,
     "w_y": 1000.0,
     "joint_limits": {
@@ -315,7 +315,7 @@ class MPCController:
                 self.opti_pushing.subject_to(self.x_foot_start - p_foot[0] >= min_push_length)
 
 
-            min_lift_height = 0.05  # 5 cm above the ground
+            min_lift_height = 0.025  # 5 cm above the ground
         
             if (k <= self.N_floor):
                 # constraint to keep the path on floor straight
@@ -323,7 +323,7 @@ class MPCController:
                 # Ground contact constraint
                 self.opti_pushing.subject_to(p_foot[2] == 0)
 
-            elif (k > self.N_floor + 50 and k < self.N_pushing - 50):
+            elif (k > self.N_floor + 20 and k < self.N_pushing - 20):
                 # the part of trajecotry that is not on the floor
                 self.opti_pushing.subject_to(p_foot[2] >= min_lift_height)
 
@@ -331,14 +331,14 @@ class MPCController:
         for k in range(self.N_pushing):
             #  this cost to minimize the velocity
             #  TODO put into threshold function for velocity, not just zeros, that velocity should be smaller than some value
-            # cost += self.w_dq * ca.sumsqr(self.dq_vars_pushing[k] - 0)
+            cost += self.w_dq * ca.sumsqr(self.dq_vars_pushing[k] - 0)
             
             if k > 0:
                 # this cost to smooth the velocity
                 # TODO put into threshold function for velocity, not just zeros, that velocity should be smaller than some value
                 # cost += self.w_smooth * ca.sumsqr(self.dq_vars_pushing[k] - self.dq_vars_pushing[k-1])
-                penalty = 10 * self.w_smooth * (self.dq_vars_pushing[k][0] - self.dq_vars_pushing[k-1][0])**2 \
-                            + 1 * self.w_smooth * (self.dq_vars_pushing[k][1] - self.dq_vars_pushing[k-1][1])**2 \
+                penalty = 1 * self.w_smooth * (self.dq_vars_pushing[k][0] - self.dq_vars_pushing[k-1][0])**2 \
+                            + 0.5 * self.w_smooth * (self.dq_vars_pushing[k][1] - self.dq_vars_pushing[k-1][1])**2 \
                             + self.w_smooth * (self.dq_vars_pushing[k][2] - self.dq_vars_pushing[k-1][2])**2  # different weights for hip, knee, ankle
                 cost += penalty
 
@@ -403,25 +403,16 @@ class MPCController:
             penalty = self.w_board_penalty * (ca.fmin(0, p_foot[2] - min_height * condition))**2
             cost += penalty
 
-
-            # penalty = self.w_board_penalty * ca.if_else(
-            #     p_foot[2] < min_height * condition,
-            #     min_height * condition - p_foot[2],
-            #     0
-            # )
-            # cost += penalty
-
-
         for k in range(self.N_lift):
             #  this cost to minimize the velocity
             #  TODO put into threshold function, that velocity should be smaller than some value
             #  but do we really need this one???
-            # cost += self.w_dq * ca.sqr(self.dq_vars_lifting[k] - 0)
+            cost += self.w_dq * ca.sumsqr(self.dq_vars_lifting[k] - 0)
             if k > 0:
                 # this cost to smooth the velocity
                 # TODO put into threshold function for velocity, not just zeros, that velocity should be smaller than some value
-                penalty = 20 * self.w_smooth * (self.dq_vars_lifting[k][0] - self.dq_vars_lifting[k-1][0])**2\
-                            + 10 * self.w_smooth * (self.dq_vars_lifting[k][1] - self.dq_vars_lifting[k-1][1])**2\
+                penalty = 10 * self.w_smooth * (self.dq_vars_lifting[k][0] - self.dq_vars_lifting[k-1][0])**2\
+                            + 2 * self.w_smooth * (self.dq_vars_lifting[k][1] - self.dq_vars_lifting[k-1][1])**2\
                             + self.w_smooth * (self.dq_vars_lifting[k][2] - self.dq_vars_lifting[k-1][2])**2  # different weights for hip, knee, ankle
         
                 cost += penalty
@@ -681,9 +672,8 @@ def animate_mpc(joint_positions_FR, foot_traj_FR, trunk_dims, trunk_center,
         com_marker.set_data([com_proj[0]], [com_proj[1]])
         com_marker.set_3d_properties([com_proj[2]])
         return lines_FR + lines_FL + lines_RR + lines_RL + [line_FR_traj, com_marker]
-    
     # Disable blit for compatibility with Poly3DCollection
-    anim = FuncAnimation(fig, update, frames=len(joint_positions_FR), interval=50, blit=False)
+    anim = FuncAnimation(fig, update, frames=len(joint_positions_FR), interval=5, blit=False)  
     plt.show()
 
 # -------------------------------
@@ -878,17 +868,20 @@ def run_mpc_pushing():
     q_sol_FR_pushing, q_sol_FR_pushing_vel = mpc.solve_pushing()
     
     # trajectory consists of 1 lifting and 4 pushing 
-    q_sol_FR = np.concatenate((q_sol_FR_lifing, q_sol_FR_pushing), axis=0)
-    # q_sol_FR = q_sol_FR_pushing
+    q_sol_FR = np.concatenate((q_sol_FR_lifing, q_sol_FR_pushing, q_sol_FR_pushing, q_sol_FR_pushing), axis=0)
 
-    # # Convert numpy array to list
-    # q_sol_FR_list = q_sol_FR.tolist()
+    # Convert numpy array to list
+    pushing_list = q_sol_FR_pushing.tolist()
+    lifting_list = q_sol_FR_lifing.tolist()
 
-    # # Save to JSON file
-    # with open("q_sol_FR.json", "w") as json_file:
-    #     json.dump(q_sol_FR_list, json_file)
 
-    # print("Saved q_sol_FR to q_sol_FR.json")
+    # Save to JSON file
+    with open("pushing.json", "w") as json_file:
+        json.dump(pushing_list, json_file)
+
+    with open("lifting.json", "w") as json_file:
+        json.dump(lifting_list, json_file)
+    print("Pushing and lifting trajectories saved to JSON files.")
 
     joint_positions_FR = []
     foot_traj_FR = []
