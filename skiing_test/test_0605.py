@@ -871,16 +871,25 @@ def run_mpc_pushing():
     q_sol_FR = np.concatenate((q_sol_FR_lifing, q_sol_FR_pushing, q_sol_FR_pushing, q_sol_FR_pushing), axis=0)
 
     # Convert numpy array to list
+    # for position
     pushing_list = q_sol_FR_pushing.tolist()
     lifting_list = q_sol_FR_lifing.tolist()
+    # for velocity
+    pushing_vel_list = q_sol_FR_pushing_vel.tolist()
+    lifting_vel_list = q_sol_FR_lifing_vel.tolist()
+
 
 
     # Save to JSON file
     with open("pushing.json", "w") as json_file:
         json.dump(pushing_list, json_file)
-
     with open("lifting.json", "w") as json_file:
         json.dump(lifting_list, json_file)
+    with open("pushing_vel.json", "w") as json_file:
+        json.dump(pushing_vel_list, json_file)
+    with open("lifting_vel.json", "w") as json_file:
+        json.dump(lifting_vel_list, json_file)
+        
     print("Pushing and lifting trajectories saved to JSON files.")
 
     joint_positions_FR = []
