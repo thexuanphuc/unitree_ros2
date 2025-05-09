@@ -18,7 +18,8 @@ default_config = {
     "step_length": 0.2,
     "swing_height": 0.07,
     "trajectory_type": "two_phase",
-    "N": 100,
+    "N": 500,
+    "N_lift": 200,  # number of steps for lifting one foot from skateboard to the floor
     "dt": 0.01,
     "dq_max": 28.6,
     "fix_hip": False,             # in MPC mode fix hip; for IK - don't fix q[0]
@@ -235,82 +236,211 @@ def inverse_kinematics(desired, robot):
     q1 = np.arctan2(R_des, d_x) - np.arctan2(B * np.sin(q2), A + B * np.cos(q2))
     return np.array([q0, q1, q2])
 
-# -------------------------------
-# Generate trajectory for FR leg (relative to hip)
-# -------------------------------
-def generate_trajectory(N, step_length, swing_height,  effective_hip_offset, p0_abs, desired_y):
-    N1 = N // 2
-    N2 = N - N1
-    p_ref_list = []
-    # Dragging phase: end effector moves on the ground (z = 0)
-    for k in range(N1+1):
-        alpha = k / N1
-        x_val = -step_length * alpha
-        z_val = 0.0
-        p_ref_list.append([x_val, desired_y, z_val])
-    # Lifting phase: end effector lifts up and down
-    for k in range(1, N2+1):
-        alpha = k / N2
-        x_val = -step_length + step_length * alpha
-        z_val = swing_height * np.sin(np.pi * alpha)
-        p_ref_list.append([x_val, desired_y, z_val])
-    p_ref_arr = np.array(p_ref_list)
-    ref_offset = p0_abs - effective_hip_offset
-    p_ref_arr = p_ref_arr + effective_hip_offset + ref_offset - np.array([0, 0, p0_abs[2]])
-    return p_ref_arr
 
 # -------------------------------
 # MPC controller for FR leg
 # -------------------------------
 class MPCController:
-    def __init__(self, robot, config, q0):
+    def __init__(self, robot, config, q0_FR_on_board, q0_FR_on_floor):
         self.robot = robot
-        self.N = config["N"]
+        self.N_pushing = config["N"]
+        self.N_floor = int(0.4 * self.N_pushing) # number of steps that the foot lie on the floor
+        self.N_lift = config["N_lift"]
         self.dt = config["dt"]
         self.fix_hip = config["fix_hip"]
-        self.q0 = q0
+        self.q0_FR_on_board = q0_FR_on_board  # initial position for lifting part (from the skateboard)
+        self.q0_FR_on_floor = q0_FR_on_floor  # initial position for pushing part (on the floor)
         self.dq_max = config["dq_max"]
         self.w_pos = config["w_pos"]
         self.w_dq = config["w_dq"]
         self.w_smooth = config["w_smooth"]
         self.w_y = config["w_y"]
+        # TODO move to config
+        self.w_board_penalty = 100000.0
         self.q_min = np.array(config["joint_limits"]["q_min"])
         self.q_max = np.array(config["joint_limits"]["q_max"])
-        self.opti = ca.Opti()
-        self.q_vars  = [self.opti.variable(3) for _ in range(self.N+1)]
-        self.dq_vars = [self.opti.variable(3) for _ in range(self.N)]
-    
-    def setup_problem(self, p_ref_arr, effective_hip_offset, desired_y):
-        self.opti.subject_to(self.q_vars[0] == self.q0)
-        for k in range(self.N):
-            self.opti.subject_to(self.q_vars[k+1] == self.q_vars[k] + self.dq_vars[k]*self.dt)
-            self.opti.subject_to(self.q_vars[k] >= self.q_min)
-            self.opti.subject_to(self.q_vars[k] <= self.q_max)
-            self.opti.subject_to(self.dq_vars[k] >= -self.dq_max)
-            self.opti.subject_to(self.dq_vars[k] <= self.dq_max)
-        self.opti.subject_to(self.q_vars[self.N] >= self.q_min)
-        self.opti.subject_to(self.q_vars[self.N] <= self.q_max)
+
+        # for pushing MPC
+        self.opti_pushing = ca.Opti()
+        self.q_vars_pushing  = [self.opti_pushing.variable(3) for _ in range(self.N_pushing+1)]
+        self.dq_vars_pushing = [self.opti_pushing.variable(3) for _ in range(self.N_pushing)]
+
+
+        # for lifting MPC
+        self.opti_lifting = ca.Opti()
+        self.q_vars_lifting  = [self.opti_lifting.variable(3) for _ in range(self.N_lift+1)]
+        self.dq_vars_lifting = [self.opti_lifting.variable(3) for _ in range(self.N_lift)]
+
+    def setup_problem_pushing(self, effective_hip_offset, distance_from_path_to_center):
+        """
+        this mpc is for pushing the foot on the floor
+        self.q_vars_pushing is the joint angle
+
+        TODO: 
+            + add constraints for end position
+        """
+
+        print("the intial position of the foot on the skateboard:", self.q0_FR_on_floor)    
+        print("the angle limits for the joints:", self.q_min, self.q_max)
+
+        # Initial position constraint
+        self.opti_pushing.subject_to(self.q_vars_pushing[0] == self.q0_FR_on_floor) 
+
+        # Final position constraint to make it move in loop
+        self.opti_pushing.subject_to(self.q_vars_pushing[self.N_pushing] == self.q0_FR_on_floor)
+
+        # Dynamics and bounds for each step
+        for k in range(self.N_pushing):
+            # kinematics constraints
+            self.opti_pushing.subject_to(self.q_vars_pushing[k+1] == self.q_vars_pushing[k] + self.dq_vars_pushing[k]*self.dt)
+
+            # limits for joint angles and velocities
+            self.opti_pushing.subject_to(self.opti_pushing.bounded(self.q_min, self.q_vars_pushing[k], self.q_max))
+            self.opti_pushing.subject_to(self.opti_pushing.bounded(-self.dq_max, self.dq_vars_pushing[k], self.dq_max))
+
+        # Final position bounds
+        self.opti_pushing.subject_to(self.opti_pushing.bounded(self.q_min, self.q_vars_pushing[self.N_pushing], self.q_max))
 
         cost = 0
-        for k in range(self.N+1):
-            p_foot = forward_kinematics(self.q_vars[k], self.robot, effective_hip_offset, self.fix_hip)
-            p_ref_k = ca.DM(p_ref_arr[k])
-            cost += self.w_pos * ca.sumsqr(p_foot - p_ref_k)
-            cost += self.w_y * (p_foot[1] - desired_y)**2
-        for k in range(self.N):
-            cost += self.w_dq * ca.sumsqr(self.dq_vars[k])
-        for k in range(1, self.N):
-            cost += self.w_smooth * ca.sumsqr(self.dq_vars[k] - self.dq_vars[k-1])
-        self.opti.minimize(cost)
-    
-    def solve(self):
+
+        # constraint for trajectory of the foot on the floor
+        for k in range(self.N_pushing+1):
+            p_foot = forward_kinematics(self.q_vars_pushing[k], self.robot, effective_hip_offset, self.fix_hip)
+            
+            # constraint the length of the foot trajectory
+            if(k == 0):
+                self.x_foot_start = p_foot[0]
+            if(k == self.N_floor):
+                min_push_length = 0.15
+                self.opti_pushing.subject_to(self.x_foot_start - p_foot[0] >= min_push_length)
+
+
+            min_lift_height = 0.05  # 5 cm above the ground
+        
+            if (k <= self.N_floor):
+                # constraint to keep the path on floor straight
+                cost += self.w_y * (p_foot[1] - distance_from_path_to_center)**2
+                # Ground contact constraint
+                self.opti_pushing.subject_to(p_foot[2] == 0)
+
+            elif (k > self.N_floor + 50 and k < self.N_pushing - 50):
+                # the part of trajecotry that is not on the floor
+                self.opti_pushing.subject_to(p_foot[2] >= min_lift_height)
+
+
+        for k in range(self.N_pushing):
+            #  this cost to minimize the velocity
+            #  TODO put into threshold function for velocity, not just zeros, that velocity should be smaller than some value
+            # cost += self.w_dq * ca.sumsqr(self.dq_vars_pushing[k] - 0)
+            
+            if k > 0:
+                # this cost to smooth the velocity
+                # TODO put into threshold function for velocity, not just zeros, that velocity should be smaller than some value
+                # cost += self.w_smooth * ca.sumsqr(self.dq_vars_pushing[k] - self.dq_vars_pushing[k-1])
+                penalty = 10 * self.w_smooth * (self.dq_vars_pushing[k][0] - self.dq_vars_pushing[k-1][0])**2 \
+                            + 1 * self.w_smooth * (self.dq_vars_pushing[k][1] - self.dq_vars_pushing[k-1][1])**2 \
+                            + self.w_smooth * (self.dq_vars_pushing[k][2] - self.dq_vars_pushing[k-1][2])**2  # different weights for hip, knee, ankle
+                cost += penalty
+
+        self.opti_pushing.minimize(cost)
+
+    def solve_pushing(self):
         ipopt_opts = {"print_level": 0, "max_iter": 500, "tol": 1e-4}
-        self.opti.solver('ipopt', {"expand": True}, ipopt_opts)
-        for k in range(self.N):
-            self.opti.set_initial(self.dq_vars[k], 0.0)
-        sol = self.opti.solve()
-        q_sol = np.array([sol.value(self.q_vars[k]) for k in range(self.N+1)])
-        return q_sol
+        self.opti_pushing.solver('ipopt', {"expand": True}, ipopt_opts)
+        for k in range(self.N_pushing):
+            self.opti_pushing.set_initial(self.q_vars_pushing[k], self.q0_FR_on_floor)
+            self.opti_pushing.set_initial(self.dq_vars_pushing[k], 0.0)
+        try:
+            sol = self.opti_pushing.solve()
+        except RuntimeError as e:
+            print("Solver failed!")
+            print("q0 initial:", self.opti_pushing.debug.value(self.q_vars_pushing[0]))
+            print("qN guess:", self.opti_pushing.debug.value(self.q_vars_pushing[-1]))
+            raise e        
+        
+        # get the solution for joint angles
+        q_sol = np.array([sol.value(self.q_vars_pushing[k]) for k in range(self.N_pushing+1)])
+
+        # get the solution for joint velocities
+        dq_sol = np.array([sol.value(self.dq_vars_pushing[k]) for k in range(self.N_pushing)])
+        return q_sol, dq_sol
+
+
+    def setup_problem_lifting(self, effective_hip_offset):
+        """
+        this mpc is for lifting the foot from skateboard to the floor
+        """
+        # Initial position constraint
+        # TODO what is the position of the foot on the skateboard
+        self.opti_lifting.subject_to(self.q_vars_lifting[0] == self.q0_FR_on_board)
+
+        # Final position of lifting phase should the same as the initial position of pushing phase
+        self.opti_lifting.subject_to(self.q_vars_lifting[self.N_lift] == self.q0_FR_on_floor)
+
+        # Dynamics and bounds for each step
+        for k in range(self.N_lift):
+            # kinematics constraints
+            self.opti_lifting.subject_to(self.q_vars_lifting[k+1] == self.q_vars_lifting[k] + self.dq_vars_lifting[k]*self.dt)
+
+            # limits for joint angles and velocities
+            self.opti_lifting.subject_to(self.opti_lifting.bounded(self.q_min, self.q_vars_lifting[k], self.q_max))
+            self.opti_lifting.subject_to(self.opti_lifting.bounded(-self.dq_max, self.dq_vars_lifting[k], self.dq_max))
+
+        cost = 0
+        # constraint to unsure the foot does not go through the skateboard
+        for k in range(self.N_lift+1):
+            p_foot = forward_kinematics(self.q_vars_lifting[k], self.robot, effective_hip_offset, self.fix_hip)
+            
+            # if the foot[1] < 0.24 (skate board size + 0.04), then foot[2] should be > 0.058 (skateboard height)
+            alpha = -1000  # steepness of the sigmoid
+            threshold = - 0.21
+            min_height = 0.06
+
+            # Smooth condition: 0 when p_foot[1] < - 0.21, 1 when p_foot[1] > -0.21
+            condition = 1 / (1 + ca.exp(alpha * (p_foot[1] - threshold)))  # sigmoid
+
+            # Enforce that if condition is "on", p_foot[2] >= min_height
+            penalty = self.w_board_penalty * (ca.fmin(0, p_foot[2] - min_height * condition))**2
+            cost += penalty
+
+
+            # penalty = self.w_board_penalty * ca.if_else(
+            #     p_foot[2] < min_height * condition,
+            #     min_height * condition - p_foot[2],
+            #     0
+            # )
+            # cost += penalty
+
+
+        for k in range(self.N_lift):
+            #  this cost to minimize the velocity
+            #  TODO put into threshold function, that velocity should be smaller than some value
+            #  but do we really need this one???
+            # cost += self.w_dq * ca.sqr(self.dq_vars_lifting[k] - 0)
+            if k > 0:
+                # this cost to smooth the velocity
+                # TODO put into threshold function for velocity, not just zeros, that velocity should be smaller than some value
+                penalty = 20 * self.w_smooth * (self.dq_vars_lifting[k][0] - self.dq_vars_lifting[k-1][0])**2\
+                            + 10 * self.w_smooth * (self.dq_vars_lifting[k][1] - self.dq_vars_lifting[k-1][1])**2\
+                            + self.w_smooth * (self.dq_vars_lifting[k][2] - self.dq_vars_lifting[k-1][2])**2  # different weights for hip, knee, ankle
+        
+                cost += penalty
+        self.opti_lifting.minimize(cost)
+    
+    def solve_lifting(self):
+        ipopt_opts = {"print_level": 0, "max_iter": 500, "tol": 1e-4}
+        self.opti_lifting.solver('ipopt', {"expand": True}, ipopt_opts)
+        for k in range(self.N_lift):
+            self.opti_lifting.set_initial(self.dq_vars_lifting[k], 0.0)
+            self.opti_lifting.set_initial(self.q_vars_lifting[k], self.q0_FR_on_board)
+        self.opti_lifting.set_initial(self.q_vars_lifting[self.N_lift], self.q0_FR_on_board)
+        
+        sol = self.opti_lifting.solve()
+        # get the solution for joint angles
+        q_sol = np.array([sol.value(self.q_vars_lifting[k]) for k in range(self.N_lift+1)])
+        # get the solution for joint velocities
+        dq_sol = np.array([sol.value(self.dq_vars_lifting[k]) for k in range(self.N_lift)])
+        return q_sol, dq_sol
 
 # -------------------------------
 # Function for drawing ground surface
@@ -703,8 +833,6 @@ def run_mpc_pushing():
     effective_hip_offset_RR = trunk_center + (robot.hip_offset_RR + robot.hip_fixed_offset_RR)
     effective_hip_offset_RL = trunk_center + (robot.hip_offset_RL + robot.hip_fixed_offset_RL)
     
-    desired_y = effective_hip_offset_FR[1]
-    
     # Configuration for static legs (FL, RR, RL) - calculated as in previous code
     q_static = q0_all.copy()
     def f_static(q2):
@@ -713,28 +841,46 @@ def run_mpc_pushing():
             robot.L3 * np.sin(q_static[1] + q2)
         )
         return p_foot_z - board_top_z
+    
+    # recalculate the joint of leg to make the foot on the board
     q_static[2] = opt.brentq(f_static, -2.7, -0.92)
     def fk_numeric(q):
         p = forward_kinematics(q, robot, effective_hip_offset_FR, config["fix_hip"])
         return np.array(ca.DM(p)).flatten()
     p0_abs_static = fk_numeric(q_static)
     
-    # For FR leg, solve inverse kinematics analytically
+    # For FR leg, solve inverse kinematics analytically to find the initial configuration that the left foot is on the board
     d_x = p0_abs_static[0] - effective_hip_offset_FR[0]
     d_y = 0  # desired - foot should be directly under hip
     d_z = board_top_z - effective_hip_offset_FR[2]
-    q0_FR = inverse_kinematics(np.array([d_x, d_y, d_z]), robot)
-    print("Initial FR configuration (for MPC):", q0_FR)
-    p0_abs_FR = fk_numeric(q0_FR)
-    
+    q0_FR_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot)
+    print("Initial FR configuration (for MPC):", q0_FR_on_board)
 
-    #  is this p_ref_arr is the foot trajectory, how to generate this one
-    p_ref_arr = generate_trajectory(config["N"], config["step_length"], config["swing_height"],
-                                    effective_hip_offset_FR, p0_abs_FR, desired_y)
-    mpc = MPCController(robot, config, q0_FR)
-    mpc.setup_problem(p_ref_arr, effective_hip_offset_FR, desired_y)
-    q_sol_FR = mpc.solve()
+    # For FR leg, solve inverse kinematics analytically to find the initial configuration that the left foot is on the floor
+    distance_from_path_to_center = - 0.14
+
+    # this is relative position of the foot to the tip of the leg (at hip joint)
+    d_x = p0_abs_static[0] - effective_hip_offset_FR[0]
+    d_y = distance_from_path_to_center
+    d_z = 0.0 - effective_hip_offset_FR[2]
+    q0_FR_on_floor = inverse_kinematics(np.array([d_x, d_y, d_z]), robot)
+    print("Initial FR configuration (on floor):", q0_FR_on_floor)
     
+    mpc = MPCController(robot, config, q0_FR_on_board, q0_FR_on_floor)
+
+    # # for lifting phase
+    mpc.setup_problem_lifting(effective_hip_offset_FR)
+    q_sol_FR_lifing, q_sol_FR_lifing_vel = mpc.solve_lifting()
+
+
+    # for pushing phase
+    mpc.setup_problem_pushing(effective_hip_offset_FR, distance_from_path_to_center + effective_hip_offset_FR[1])
+    q_sol_FR_pushing, q_sol_FR_pushing_vel = mpc.solve_pushing()
+    
+    # trajectory consists of 1 lifting and 4 pushing 
+    q_sol_FR = np.concatenate((q_sol_FR_lifing, q_sol_FR_pushing), axis=0)
+    # q_sol_FR = q_sol_FR_pushing
+
     # # Convert numpy array to list
     # q_sol_FR_list = q_sol_FR.tolist()
 
@@ -874,7 +1020,7 @@ def main():
     if mode == "com_transfering":
         run_com_transfering()
     else:
-        run_mpc_pushing()
+        joint_angle = run_mpc_pushing()
         # print("the joint_angle is -------------------------", joint_angle.shape)
 
 
