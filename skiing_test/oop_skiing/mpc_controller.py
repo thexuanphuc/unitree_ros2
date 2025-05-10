@@ -1,6 +1,8 @@
 import casadi as ca
 import numpy as np
 from kinematics import forward_kinematics
+from config_skate_board import config_skate_board   
+
 # -------------------------------
 # MPC controller for FR leg
 # -------------------------------
@@ -74,7 +76,7 @@ class MPCController:
                 min_push_length = 0.15
                 self.opti_pushing.subject_to(self.x_foot_start - p_foot[0] >= min_push_length)
 
-            min_lift_height = 0.025  # 5 cm above the ground
+            min_lift_height = 0.025  # 2.5 cm above the ground
         
             if k <= self.N_floor:
                 # constraint to keep the path on floor straight
@@ -152,8 +154,8 @@ class MPCController:
 
             # if the foot[1] < 0.24 (skate board size + 0.04), then foot[2] should be > 0.058 (skateboard height)
             alpha = -1000  # steepness of the sigmoid
-            threshold = -0.21
-            min_height = 0.06
+            threshold = -config_skate_board["width"] / 2 - 0.01
+            min_height = config_skate_board["high"] + 0.005
 
             # Smooth condition: 0 when p_foot[1] < -0.21, 1 when p_foot[1] > -0.21
             condition = 1 / (1 + ca.exp(alpha * (p_foot[1] - threshold)))  # sigmoid

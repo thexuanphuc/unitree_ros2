@@ -3,7 +3,7 @@ from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from kinematics import compute_robot_com
 import numpy as np
-
+from config_skate_board import config_skate_board   
 # -------------------------------
 # Function for drawing ground surface
 # -------------------------------
@@ -48,9 +48,9 @@ def draw_box(ax, lower_corner, width, depth, height, edgecolor='green', facecolo
 
 def draw_skateboard(ax,
                     board_length=0.7,
-                    board_width=0.4,
+                    board_width=config_skate_board["width"],
                     board_thickness=0.02,
-                    wheel_diameter=0.056,
+                    wheel_diameter=config_skate_board["high"] - 0.02,
                     wheel_width=0.04,
                     wheel_gap=0.01):
     wheel_radius = wheel_diameter / 2
@@ -246,7 +246,7 @@ def animate_com_transfering(trunk_traj, leg_trajs, com_traj, board_top_z, trunk_
     trunk_box = Poly3DCollection([], linewidths=1, edgecolors='green', alpha=0.3)
     trunk_box.set_facecolor((0, 1, 0, 0.3))
     ax.add_collection3d(trunk_box)
-    
+    config_skate_board
     # Lines for legs for each color set (same for all legs, but drawn separately)
     colors = {
         "FR": ['skyblue', 'blue', 'navy'],

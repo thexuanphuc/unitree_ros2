@@ -8,6 +8,8 @@ from robot_model import RobotModel, default_config, hip_target
 from kinematics import forward_kinematics, inverse_kinematics, compute_leg_positions, compute_robot_com,  forward_kinematics_relative
 from mpc_controller import MPCController
 from animation import animate_mpc, animate_com_transfering
+from config_skate_board import config_skate_board   
+
 
 # -------------------------------
 # MPC mode (mpc_pushing)
@@ -22,7 +24,7 @@ def run_mpc_pushing():
     config = default_config.copy()
     config["fix_hip"] = False  # FR leg with free hip, but for IK MPC we set q0 separately
     distance_between_skate_and_robot = 0.21
-    board_top_z = 0.058
+    board_top_z = config_skate_board["high"]
     standing_height = board_top_z + distance_between_skate_and_robot
     trunk_center = np.array([0.0, 0.0, standing_height])
     
@@ -40,7 +42,7 @@ def run_mpc_pushing():
 
     # For FR leg, solve inverse kinematics analytically to find the initial configuration that the left foot is on the floor
     
-    distance_from_path_to_center = -0.1 +  (robot.global_hip_offset_FR + robot.hip_fixed_offset_FR)[1]
+    distance_from_path_to_center = -config_skate_board["distance_from_edge"] +  (robot.global_hip_offset_FR + robot.hip_fixed_offset_FR)[1]
 
     # this is relative position of the foot to the tip of the leg (at hip joint)
     d_x = (robot.global_hip_offset_FR + robot.hip_fixed_offset_FR)[0]
