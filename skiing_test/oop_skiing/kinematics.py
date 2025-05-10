@@ -121,13 +121,30 @@ def inverse_kinematics(desired, robot:RobotModel=None, side: str = "FR"):
     # fake and real length of thigh + calf (fake when we look from the front side of the robot)
     L23_fake = np.sqrt((d_y - LL1 * np.cos(theta1)) ** 2 + (d_z - LL1 * np.sin(theta1)) ** 2)
     L23_real = np.sqrt(d_x ** 2 + L23_fake ** 2)
-
+    
     # calculate theta3 (ankle angle); -1 as solution for current configuration
     theta3 = -1 * np.arccos((L23_real ** 2 - LL2 ** 2 - LL3 ** 2) / (2 * LL2 * LL3))
+    if np.isnan(theta3):
+        # log all the values
+        print(f"LL2: {LL2}, LL3: {LL3}, L23_real: {L23_real}")
+        print(f"d_x: {d_x}, d_y: {d_y}, d_z: {d_z}")
+        print(f"theta1: {theta1}, L23_fake: {L23_fake}")
+        print(f"theta3: {theta3}")
+        print("the value inside acos is out of range: ", (L23_real ** 2 - LL2 ** 2 - LL3 ** 2) / (2 * LL2 * LL3))
+        raise ValueError("theta3 calculation resulted in NaN. Check the input values.")
+        
 
     # calculate theta2 (knee angle)
     a2 = np.arcsin(LL3 * np.sin(theta3) / L23_real)
     theta2 = -np.arccos(L23_fake / L23_real) - a2
+    if np.isnan(theta2):
+        # log all the values
+        print(f"LL2: {LL2}, LL3: {LL3}, L23_real: {L23_real}")
+        print(f"d_x: {d_x}, d_y: {d_y}, d_z: {d_z}")
+        print(f"theta1: {theta1}, L23_fake: {L23_fake}")
+        print(f"theta3: {theta3}, a2: {a2}")
+        print(f"theta2: {theta2}")
+        raise ValueError("theta2 calculation resulted in NaN. Check the input values.")
 
     return np.array([theta1, theta2, theta3])
 

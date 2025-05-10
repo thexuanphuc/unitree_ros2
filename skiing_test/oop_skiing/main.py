@@ -35,7 +35,7 @@ def run_mpc_pushing():
 
     # For FR leg, solve inverse kinematics analytically to find the initial configuration that the left foot is on the board
     d_x = (robot.global_hip_offset_FR + robot.hip_fixed_offset_FR)[0]
-    d_y = (robot.global_hip_offset_FR + robot.hip_fixed_offset_FR)[1]
+    d_y = - config_skate_board["width"] / 2 + 0.015
     d_z = board_top_z
     q0_FR_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot, side="FR")
     print("Initial FR configuration (for MPC):", q0_FR_on_board)
@@ -72,24 +72,6 @@ def run_mpc_pushing():
     # for velocity
     pushing_vel_list = q_sol_FR_pushing_vel.tolist()
     lifting_vel_list = q_sol_FR_lifting_vel.tolist()
-
-
-    # Save files to the target directory
-    file_paths = {
-        "pushing.json": pushing_list,
-        "lifting.json": lifting_list,
-        "pushing_vel.json": pushing_vel_list,
-        "lifting_vel.json": lifting_vel_list,
-        "q0_FR_on_board.json": q0_FR_on_board.tolist()
-    }
-
-    for filename, data in file_paths.items():
-        full_path = os.path.join(target_dir, filename)
-        with open(full_path, 'w') as json_file:
-            json.dump(data, json_file)
-
-    print("Trajectories saved to:", target_dir)
-
     
     joint_positions_FR = []
     foot_traj_FR = []
@@ -102,12 +84,45 @@ def run_mpc_pushing():
     joint_positions_FR = np.array(joint_positions_FR)
     foot_traj_FR = np.array(foot_traj_FR)
 
-    print("Joint positions for FR leg:", joint_positions_FR.shape)
-    # because the configuration for 4 legs on the board is the same
-    
-    static_positions_FL = compute_leg_positions(q0_FR_on_board, robot, side="FL", fix_hip=config["fix_hip"])
-    static_positions_RR = compute_leg_positions(q0_FR_on_board, robot, side="RR", fix_hip=config["fix_hip"])
-    static_positions_RL = compute_leg_positions(q0_FR_on_board, robot, side="RL", fix_hip=config["fix_hip"])
+    # find the position of others legs
+    # for RR leg, we need to keep the foot more narrow
+    d_x = (robot.global_hip_offset_RR + robot.hip_fixed_offset_RR)[0]
+    d_y = - config_skate_board["width"] / 2 + 0.025
+    d_z = board_top_z
+    q0_RR_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot, side="RR")
+
+    # for FL leg
+    d_x = (robot.global_hip_offset_FL + robot.hip_fixed_offset_FL)[0]
+    d_y = config_skate_board["width"] / 2 - 0.015
+    d_z = board_top_z
+    q0_FL_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot, side="FL")
+    # for RL leg, we need to keep the foot more narrow
+    d_x = (robot.global_hip_offset_RL + robot.hip_fixed_offset_RL)[0]
+    d_y = config_skate_board["width"] / 2 - 0.025
+    d_z = board_top_z
+    q0_RL_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot, side="RL")
+
+    onboard_legs = np.concatenate((q0_FL_on_board, q0_FR_on_board,q0_RL_on_board, q0_RR_on_board), axis=0)
+
+    # Save files to the target directory
+    file_paths = {
+        "pushing.json": pushing_list,
+        "lifting.json": lifting_list,
+        "pushing_vel.json": pushing_vel_list,
+        "lifting_vel.json": lifting_vel_list,
+        "onboard_legs.json": onboard_legs.tolist()
+    }
+
+    for filename, data in file_paths.items():
+        full_path = os.path.join(target_dir, filename)
+        with open(full_path, 'w') as json_file:
+            json.dump(data, json_file)
+
+    print("Trajectories saved to:", target_dir)
+
+    static_positions_FL = compute_leg_positions(q0_FL_on_board, robot, side="FL", fix_hip=config["fix_hip"])
+    static_positions_RR = compute_leg_positions(q0_RR_on_board, robot, side="RR", fix_hip=config["fix_hip"])
+    static_positions_RL = compute_leg_positions(q0_RL_on_board, robot, side="RL", fix_hip=config["fix_hip"])
 
     print("Link lengths:")
     for leg, pos in zip(["FR", "FL", "RR", "RL"], [joint_positions_FR[0], static_positions_FL, static_positions_RR, static_positions_RL]):
