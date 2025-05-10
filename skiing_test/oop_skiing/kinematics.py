@@ -1,6 +1,6 @@
 import numpy as np
 import casadi as ca
-
+from robot_model import RobotModel
 # -------------------------------
 # Rotation matrices functions
 # -------------------------------
@@ -45,63 +45,91 @@ def forward_kinematics_relative(q, L1, L2, L3, fix_hip=True):
         return v1 + v2 + v3
 
 # -------------------------------
-# Absolute kinematics: p_abs = effective_hip_offset + p_rel
+# Absolute kinematics: p_abs = global_hip_offset + p_rel
 # -------------------------------
-def forward_kinematics(q, robot, effective_hip_offset, fix_hip=True):
+def forward_kinematics(q, robot:RobotModel=None, side: str = "FR", fix_hip=True):
     """
-    effective_hip_offset is the position of the hip joint in the world frame
+    global_hip_offset is the position of the hip joint in the world frame
+
+    return the position of the foot in the world frame (global frame)
     """
-    p_rel = forward_kinematics_relative(q, L1=robot.L1, L2=robot.L2, L3=robot.L3, fix_hip=fix_hip)
-    return effective_hip_offset + p_rel
+    # get attributes from robot model based on the side
+    L1 = getattr(robot, f"hip_fixed_offset_{side}")[1]
+    L2 = robot.L2
+    L3 = robot.L3
+    global_hip_offset = getattr(robot, f"global_hip_offset_{side}")
+    p_rel = forward_kinematics_relative(q, L1=L1, L2=L2, L3=L3, fix_hip=fix_hip)
+    return global_hip_offset + p_rel
 
 # -------------------------------
 # Function to compute leg positions for visualization
 # -------------------------------
-def compute_leg_positions(q, effective_offset, robot, fix_hip=True):
-    hip = effective_offset.copy()
+def compute_leg_positions(q, robot:RobotModel=None, side:str="FR", fix_hip=True):
+    """
+    v0 = vector from global base to hip (global_hip_offset)
+    v1 = vector from base to hip (after hip-joint rotation)
+    v2 = vector from hip to thigh (after thigh-joint rotation)
+    v3 = vector from thigh to calf(foot) (after calf-joint rotation)
+
+    """
+
+    LL1 = getattr(robot, f"hip_fixed_offset_{side}").copy()
+    LL2 = np.array([robot.L2, 0, 0])
+    LL3 = np.array([robot.L3, 0, 0])
+
+    v0 = getattr(robot, f"global_hip_offset_{side}").copy()
     if fix_hip:
-        knee = hip.copy()
-        thigh = R_y(q[1]) @ np.array([robot.L2, 0, 0])
-        ankle = knee + thigh
-        calf = R_y(q[1] + q[2]) @ np.array([robot.L3, 0, 0])
-        foot = ankle + calf
+        v1 = LL1
+        v2 = R_y(q[1]) @ LL2
+        v3 = R_y(q[1] + q[2]) @ LL3
     else:
-        q0, q1, q2 = q
-        thigh_local = R_y(q1) @ np.array([robot.L2, 0, 0])
-        thigh = R_x(q0) @ thigh_local
-        knee = hip.copy()
-        ankle = knee + thigh
-        calf_local = R_y(q1 + q2) @ np.array([robot.L3, 0, 0])
-        calf = R_x(q0) @ calf_local
-        foot = ankle + calf
+        v1 = R_x(q[0]) @ LL1
+        v2 = R_x(q[0]) @ R_y(q[1]) @ LL2
+        v3 = R_x(q[0]) @ R_y(q[1] + q[2]) @ LL3
 
     # this is the real position in 3D, not the joint angle
+    hip = v0.copy()
+    knee = (hip + v1).copy()
+    ankle = (knee + v2).copy()
+    foot = (ankle + v3).copy()
     return hip, knee, ankle, foot
 
 # -------------------------------
 # Inverse kinematics for 3DoF leg (analytically through numpy)
 # -------------------------------
-def inverse_kinematics(desired, robot):
-    print("the length L1, L2, L3:", robot.L1, robot.L2, robot.L3)
-    
-    # desired: 3-dimensional vector (d_x, d_y, d_z) – end effector position relative to hip (effective)
-    d_x, d_y, d_z = desired
+def inverse_kinematics(desired, robot:RobotModel=None, side: str = "FR"):
+
+    """
+    desired: 3-dimensional vector (d_x, d_y, d_z) – end effector position in global frame    
+
+    return the joint angles (hip-roll, knee, ankle) in radians
+    """
+
+    # get attributes from robot model based on the side
+    LL1 = getattr(robot, f"hip_fixed_offset_{side}")[1]
+    LL2 = robot.L2
+    LL3 = robot.L3
+    global_hip_offset = getattr(robot, f"global_hip_offset_{side}")
+    print("the length L1, L2, L3:", LL1, LL2, LL3)
+
+    # desired: 3-dimensional vector (d_x, d_y, d_z) – end effector position relative to hip (effective- or origin-hip)
+    d_x, d_y, d_z = desired - global_hip_offset
     # First, find hip-roll angle q0:
     R_val = np.hypot(d_y, d_z)
     # If R_val is very small, choose q0 = 0 (to avoid division by zero)
     if R_val < 1e-6:
         theta1 = 0.0
     else:
-        theta1 = np.arctan2(d_y, -d_z) - np.arccos(robot.L1 / R_val)
+        theta1 = np.arctan2(d_y, -d_z) - np.arccos(R_val)
     # fake and real length of thigh + calf (fake when we look from the front side of the robot)
-    L23_fake = np.sqrt((d_y - robot.L1 * np.sin(theta1)) ** 2 + (d_z - robot.L1 * np.cos(theta1)) ** 2)
+    L23_fake = np.sqrt((d_y - LL1 * np.sin(theta1)) ** 2 + (d_z - LL1 * np.cos(theta1)) ** 2)
     L23_real = np.sqrt(d_x ** 2 + L23_fake ** 2)
 
     # calculate theta3 (ankle angle); -1 as solution for current configuration
-    theta3 = -1 * np.arccos((L23_real ** 2 - robot.L2 ** 2 - robot.L3 ** 2) / (2 * robot.L2 * robot.L3))
+    theta3 = -1 * np.arccos((L23_real ** 2 - LL2 ** 2 - LL3 ** 2) / (2 * LL2 * LL3))
 
     # calculate theta2 (knee angle)
-    a2 = np.arcsin(robot.L3 * np.sin(theta3) / L23_real)
+    a2 = np.arcsin(LL3 * np.sin(theta3) / L23_real)
     theta2 = -np.arccos(L23_fake / L23_real) - a2
 
     return np.array([theta1, theta2, theta3])
@@ -109,6 +137,7 @@ def inverse_kinematics(desired, robot):
 # -------------------------------
 # Functions for calculating robot CoM
 # -------------------------------
+# TODO: check these 2 functions 
 def compute_leg_com(positions, leg_prefix, link_masses):
     # positions: (hip, knee, ankle, foot)
     hip, knee, ankle, foot = positions
