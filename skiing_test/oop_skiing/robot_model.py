@@ -47,20 +47,26 @@ def read_offset(urdf_file, joint_name):
 # Robot model class (reading URDF and kinematics)
 # -------------------------------
 class RobotModel:
-    def __init__(self, urdf_file):
-        self.urdf_file = urdf_file
+    def __init__(self, config):
+        self.urdf_file = config["urdf_file"]
         self.L1, self.L2, self.L3 = self.read_link_lengths_from_urdf()
         self.trunk_dims = self.read_trunk_dimensions_from_urdf()
-        self.hip_offset_FR = read_offset(urdf_file, "FR_hip_joint")
-        self.hip_fixed_offset_FR = read_offset(urdf_file, "FR_hip_fixed")
-        self.hip_offset_FL = read_offset(urdf_file, "FL_hip_joint")
-        self.hip_fixed_offset_FL = read_offset(urdf_file, "FL_hip_fixed")
-        self.hip_offset_RR = read_offset(urdf_file, "RR_hip_joint")
-        self.hip_fixed_offset_RR = read_offset(urdf_file, "RR_hip_fixed")
-        self.hip_offset_RL = read_offset(urdf_file, "RL_hip_joint")
-        self.hip_fixed_offset_RL = read_offset(urdf_file, "RL_hip_fixed")
+        self.hip_offset_FR = read_offset(self.urdf_file, "FR_hip_joint")
+        self.hip_fixed_offset_FR = read_offset(self.urdf_file, "FR_hip_fixed")
+        self.hip_offset_FL = read_offset(self.urdf_file, "FL_hip_joint")
+        self.hip_fixed_offset_FL = read_offset(self.urdf_file, "FL_hip_fixed")
+        self.hip_offset_RR = read_offset(self.urdf_file, "RR_hip_joint")
+        self.hip_fixed_offset_RR = read_offset(self.urdf_file, "RR_hip_fixed")
+        self.hip_offset_RL = read_offset(self.urdf_file, "RL_hip_joint")
+        self.hip_fixed_offset_RL = read_offset(self.urdf_file, "RL_hip_fixed")
         self.link_masses = self.read_link_masses_from_urdf()
 
+
+        # the hip_offset_FL is offset from global(center now) to the hip joint
+        # the hip_fixed_offset_FL is offset from the hip joint to the thigh joint (on y axis)
+        # the robot.hip_offset_FL is [0.183 0.047 0.   ]
+        # the robot.hip_fixed_offset_FL is [0.    0.081 0.   ]
+                
     def read_link_lengths_from_urdf(self):
         tree = ET.parse(self.urdf_file)
         root = tree.getroot()
@@ -134,3 +140,12 @@ class RobotModel:
                 masses[link.get("name")] = mass
         print("Link masses from URDF:", masses)
         return masses
+    
+    def set_trunk_center(self, trunk_center:np.ndarray):
+        # trunk_center: [x, y, z]
+
+        self.trunk_center = trunk_center
+        self.global_hip_offset_FR = self.trunk_center + (self.hip_offset_FR)
+        self.global_hip_offset_FL = self.trunk_center + (self.hip_offset_FL)
+        self.global_hip_offset_RR = self.trunk_center + (self.hip_offset_RR)
+        self.global_hip_offset_RL = self.trunk_center + (self.hip_offset_RL)
