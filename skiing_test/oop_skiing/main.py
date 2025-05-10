@@ -1,6 +1,7 @@
 import sys
-import numpy as np
+import os
 import json
+import numpy as np
 import casadi as ca
 import scipy.optimize as opt
 from robot_model import RobotModel, default_config, hip_target
@@ -12,6 +13,12 @@ from animation import animate_mpc, animate_com_transfering
 # MPC mode (mpc_pushing)
 # -------------------------------
 def run_mpc_pushing():
+    # Get the target directory path
+    current_dir = os.path.dirname(os.path.abspath(__file__))  # Get current script's directory
+    target_dir = os.path.join(current_dir, '../../unitree_controller/config')
+    # Create directory if it doesn't exist
+    os.makedirs(target_dir, exist_ok=True)
+
     config = default_config.copy()
     config["fix_hip"] = False  # FR leg with free hip, but for IK MPC we set q0 separately
     distance_between_skate_and_robot = 0.21
@@ -64,19 +71,24 @@ def run_mpc_pushing():
     pushing_vel_list = q_sol_FR_pushing_vel.tolist()
     lifting_vel_list = q_sol_FR_lifting_vel.tolist()
 
-    # Save to JSON file
-    with open("pushing.json", "w") as json_file:
-        json.dump(pushing_list, json_file)
-    with open("lifting.json", "w") as json_file:
-        json.dump(lifting_list, json_file)
-    with open("pushing_vel.json", "w") as json_file:
-        json.dump(pushing_vel_list, json_file)
-    with open("lifting_vel.json", "w") as json_file:
-        json.dump(lifting_vel_list, json_file)
-    with open("q0_FR_on_board.json", "w") as json_file:
-        json.dump(q0_FR_on_board.tolist(), json_file)
-    print("Pushing and lifting trajectories saved to JSON files.")
 
+    # Save files to the target directory
+    file_paths = {
+        "pushing.json": pushing_list,
+        "lifting.json": lifting_list,
+        "pushing_vel.json": pushing_vel_list,
+        "lifting_vel.json": lifting_vel_list,
+        "q0_FR_on_board.json": q0_FR_on_board.tolist()
+    }
+
+    for filename, data in file_paths.items():
+        full_path = os.path.join(target_dir, filename)
+        with open(full_path, 'w') as json_file:
+            json.dump(data, json_file)
+
+    print("Trajectories saved to:", target_dir)
+
+    
     joint_positions_FR = []
     foot_traj_FR = []
     for q in q_sol_FR:
