@@ -2,12 +2,12 @@ import numpy as np
 import casadi as ca
 from robot_model import RobotModel
 # -------------------------------
-# Rotation matrices functions
+# Rotation matrices functions (notice the rotation along y have different sign)
 # -------------------------------
 def R_y(angle):
-    return np.array([[np.cos(angle), 0, -np.sin(angle)],
+    return np.array([[np.cos(angle), 0, np.sin(angle)],
                      [0, 1, 0],
-                     [np.sin(angle), 0, np.cos(angle)]])
+                     [-np.sin(angle), 0, np.cos(angle)]])
 
 def R_x(angle):
     return np.array([[1, 0, 0],
@@ -33,15 +33,15 @@ def forward_kinematics_relative(q, L1, L2, L3, fix_hip=True):
 
     if fix_hip:
         v1 = np.array([0, L1, 0])
-        v2 = R_y(theta2) @ np.array([L2, 0, 0])
-        v3 = R_y(theta2 + theta3) @ np.array([L3, 0, 0])
+        v2 = R_y(theta2) @ np.array([0, 0, -L2])
+        v3 = R_y(theta2 + theta3) @ np.array([0, 0, -L3])
         return v1 + v2 + v3
     
     else:
         # hip-roll angle
         v1 = R_x(theta1) @ np.array([0, L1, 0])
-        v2 = R_x(theta1) @ R_y(theta2) @ np.array([L2, 0, 0])
-        v3 = R_x(theta1) @ R_y(theta2 + theta3) @ np.array([L3, 0, 0])
+        v2 = R_x(theta1) @ R_y(theta2) @ np.array([0, 0, -L2])
+        v3 = R_x(theta1) @ R_y(theta2 + theta3) @ np.array([0, 0, -L3])
         return v1 + v2 + v3
 
 # -------------------------------
@@ -72,10 +72,9 @@ def compute_leg_positions(q, robot:RobotModel=None, side:str="FR", fix_hip=True)
     v3 = vector from thigh to calf(foot) (after calf-joint rotation)
 
     """
-
     LL1 = getattr(robot, f"hip_fixed_offset_{side}").copy()
-    LL2 = np.array([robot.L2, 0, 0])
-    LL3 = np.array([robot.L3, 0, 0])
+    LL2 = np.array([0, 0, -robot.L2])
+    LL3 = np.array([0, 0, -robot.L3])
 
     v0 = getattr(robot, f"global_hip_offset_{side}").copy()
     if fix_hip:
@@ -86,7 +85,6 @@ def compute_leg_positions(q, robot:RobotModel=None, side:str="FR", fix_hip=True)
         v1 = R_x(q[0]) @ LL1
         v2 = R_x(q[0]) @ R_y(q[1]) @ LL2
         v3 = R_x(q[0]) @ R_y(q[1] + q[2]) @ LL3
-
     # this is the real position in 3D, not the joint angle
     hip = v0.copy()
     knee = (hip + v1).copy()
@@ -110,7 +108,6 @@ def inverse_kinematics(desired, robot:RobotModel=None, side: str = "FR"):
     LL2 = robot.L2
     LL3 = robot.L3
     global_hip_offset = getattr(robot, f"global_hip_offset_{side}")
-    print("the length L1, L2, L3:", LL1, LL2, LL3)
 
     # desired: 3-dimensional vector (d_x, d_y, d_z) – end effector position relative to hip (effective- or origin-hip)
     d_x, d_y, d_z = desired - global_hip_offset
@@ -120,9 +117,9 @@ def inverse_kinematics(desired, robot:RobotModel=None, side: str = "FR"):
     if R_val < 1e-6:
         theta1 = 0.0
     else:
-        theta1 = np.arctan2(d_y, -d_z) - np.arccos(R_val)
+        theta1 = np.arccos(LL1 / R_val) - 0.5 * np.pi + np.arctan2(d_y, -d_z)
     # fake and real length of thigh + calf (fake when we look from the front side of the robot)
-    L23_fake = np.sqrt((d_y - LL1 * np.sin(theta1)) ** 2 + (d_z - LL1 * np.cos(theta1)) ** 2)
+    L23_fake = np.sqrt((d_y - LL1 * np.cos(theta1)) ** 2 + (d_z - LL1 * np.sin(theta1)) ** 2)
     L23_real = np.sqrt(d_x ** 2 + L23_fake ** 2)
 
     # calculate theta3 (ankle angle); -1 as solution for current configuration
