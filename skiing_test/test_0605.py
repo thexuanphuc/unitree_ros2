@@ -23,7 +23,7 @@ default_config = {
     "dt": 0.01,
     "dq_max": 28.6,
     "fix_hip": False,             # in MPC mode fix hip; for IK - don't fix q[0]
-    "q0": [0.0, 2.5, -1],
+    "q0": [0.0, 0.0, -0.9],
     "w_pos": 10000.0,
     "w_dq": 0.001,
     "w_smooth": 0.1,
@@ -147,9 +147,9 @@ class RobotModel:
 # Rotation matrices functions
 # -------------------------------
 def R_y(angle):
-    return np.array([[np.cos(angle), 0, np.sin(angle)],
+    return np.array([[np.cos(angle), 0, -np.sin(angle)],
                      [0, 1, 0],
-                     [-np.sin(angle), 0, np.cos(angle)]])
+                     [np.sin(angle), 0, np.cos(angle)]])
 
 def R_x(angle):
     return np.array([[1, 0, 0],
@@ -159,30 +159,54 @@ def R_x(angle):
 # -------------------------------
 # Forward kinematics (with hip-roll consideration)
 # -------------------------------
-def forward_kinematics_relative(q, robot, fix_hip=True):
+def forward_kinematics_relative(q, L1, L2, L3, fix_hip=True):
+
+    """
+    L1: offset from base to hip (depends on the side)
+    L2: length of thigh (usually constant)
+    L3: length of calf (usually constant)
+
+    v1 = vector from base to hip (after hip-joint rotation)
+    v2 = vector from hip to thigh (after thigh-joint rotation)
+    v3 = vector from thigh to calf(foot) (after calf-joint rotation)
+    """
+    theta1 = q[0]
+    theta2 = q[1]
+    theta3 = q[2]
+
     if fix_hip:
-        q1 = q[1]
-        q2 = q[2]
-        thigh_vector = R_y(q1) @ np.array([robot.L2, 0, 0])
-        calf_vector  = R_y(q1+q2) @ np.array([robot.L3, 0, 0])
-        return ca.vertcat(thigh_vector[0] + calf_vector[0],
-                          0,
-                          thigh_vector[2] + calf_vector[2])
+        v1 = np.array([0, L1, 0])
+        v2 = R_y(theta2) @ np.array([L2, 0, 0])
+        v3 = R_y(theta2+theta3) @ np.array([L3, 0, 0])
+        return v1 + v2 + v3
+    
     else:
-        q0 = q[0]
-        q1 = q[1]
-        q2 = q[2]
-        thigh_vector = R_y(q1) @ np.array([robot.L2, 0, 0])
-        calf_vector  = R_y(q1+q2) @ np.array([robot.L3, 0, 0])
-        p_local = thigh_vector + calf_vector
-        p_rel = R_x(q0) @ p_local
-        return ca.vertcat(p_rel[0], p_rel[1], p_rel[2])
+        # hip-roll angle
+        v1 = R_x(theta1) @ np.array([0, L1, 0])
+        v2 = R_x(theta1) @ R_y(theta2) @ np.array([L2, 0, 0])
+        v3 = R_x(theta1) @ R_y(theta2+theta3) @ np.array([L3, 0, 0])
+        return v1 + v2 + v3
+        
 
 # -------------------------------
 # Absolute kinematics: p_abs = effective_hip_offset + p_rel
 # -------------------------------
-def forward_kinematics(q, robot, effective_hip_offset, fix_hip=True):
-    p_rel = forward_kinematics_relative(q, robot, fix_hip)
+def forward_kinematics(q, robot, side: str = "FR", effective_hip_offset=None, fix_hip=True):
+    """
+    Computes the forward kinematics for a given leg of the robot.
+    
+    Args:
+        q: Joint angles.
+        robot: Robot model containing hip offsets.
+        side (str): One of "FR", "FL", "RR", or "RL".
+        effective_hip_offset: Position of the hip joint in the world frame.
+        fix_hip (bool): Whether the hip is fixed or not.
+        
+    Returns:
+        The position of the foot in the world frame.
+    """
+    L1 = getattr(robot, f"hip_fixed_offset_{side}")[1]
+    p_rel = forward_kinematics_relative(q, L1=L1, fix_hip=fix_hip)
     return effective_hip_offset + p_rel
 
 # -------------------------------
@@ -214,27 +238,29 @@ def compute_leg_positions(q, effective_offset, robot, fix_hip=True):
 # Inverse kinematics for 3DoF leg (analytically through numpy)
 # -------------------------------
 def inverse_kinematics(desired, robot):
+    print("the length L1, L2, L3:", robot.L1, robot.L2, robot.L3)    
+
     # desired: 3-dimensional vector (d_x, d_y, d_z) – end effector position relative to hip (effective)
     d_x, d_y, d_z = desired
     # First, find hip-roll angle q0:
     R_val = np.hypot(d_y, d_z)
     # If R_val is very small, choose q0 = 0 (to avoid division by zero)
     if R_val < 1e-6:
-        q0 = 0.0
+        theta1 = 0.0
     else:
-        q0 = np.arctan2(d_y, -d_z)
-    # Define scalar R for 2R manipulator:
-    R_des = R_val
-    A = robot.L2
-    B = robot.L3
-    # Standard equation for 2 links:
-    D = (d_x**2 + R_des**2 - A**2 - B**2) / (2 * A * B)
-    D = np.clip(D, -1.0, 1.0)
-    # Choose "elbow down" solution (q2 negative)
-    q2 = -np.arccos(D)
-    # Calculate q1:
-    q1 = np.arctan2(R_des, d_x) - np.arctan2(B * np.sin(q2), A + B * np.cos(q2))
-    return np.array([q0, q1, q2])
+        theta1 = np.arctan2(d_y, -d_z) - np.arccos(robot.L1 / R_val)
+    # fake and real length of thigh + calf (fake when we look from the front side of the robot)
+    L23_fake = np.sqrt((d_y - robot.L1 * np.sin(theta1))**2 + (d_z - robot.L1 * np.cos(theta1))**2)
+    L23_real = np.sqrt(d_x**2 + L23_fake**2)
+
+    # calculate theta3 (ankle angle); -1 as solution for current configuration
+    theta3 = -1 * np.arccos(L23_real**2 - robot.L2**2 - robot.L3**2) / (2 * robot.L2 * robot.L3)
+
+    # calculate theta2 (knee angle)
+    a2 = np.arcsin(robot.L3 * np.sin(theta3) / L23_real)
+    theta2 = -np.arccos(L23_fake / L23_real) - a2
+
+    return np.array([theta1, theta2, theta3])
 
 
 # -------------------------------
@@ -818,11 +844,21 @@ def run_mpc_pushing():
     config["standing_height"] = standing_height
 
     q0_all = np.array(config["q0"])
+
+    # the hip_offset_FL is offset from global(center now) to the hip joint
+    # the hip_fixed_offset_FL is offset from the hip joint to the thigh joint (on y axis)
+
     effective_hip_offset_FR = trunk_center + (robot.hip_offset_FR + robot.hip_fixed_offset_FR)
     effective_hip_offset_FL = trunk_center + (robot.hip_offset_FL + robot.hip_fixed_offset_FL)
-    effective_hip_offset_RR = trunk_center + (robot.hip_offset_RR + robot.hip_fixed_offset_RR)
+    # effective_hip_offset_RR = trunk_center + (robot.hip_offset_RR + robot.hip_fixed_offset_RR)
+    print(robot.hip_fixed_offset_RR.shape)
+    effective_hip_offset_RR = trunk_center + (robot.hip_offset_RR + np.zeros(3,))
     effective_hip_offset_RL = trunk_center + (robot.hip_offset_RL + robot.hip_fixed_offset_RL)
-    
+    print("-----------------------the robot.hip_offset_FL is ---------------",robot.hip_offset_FL)
+    print("-----------------------the robot.hip_fixed_offset_FL is ---------------",robot.hip_fixed_offset_FL)
+    # -----------------------the robot.hip_offset_FL is --------------- [0.183 0.047 0.   ]
+    # -----------------------the robot.hip_fixed_offset_FL is --------------- [0.    0.081 0.   ]
+
     # Configuration for static legs (FL, RR, RL) - calculated as in previous code
     q_static = q0_all.copy()
     def f_static(q2):
@@ -835,7 +871,7 @@ def run_mpc_pushing():
     # recalculate the joint of leg to make the foot on the board
     q_static[2] = opt.brentq(f_static, -2.7, -0.92)
     def fk_numeric(q):
-        p = forward_kinematics(q, robot, effective_hip_offset_FR, config["fix_hip"])
+        p = forward_kinematics(q, robot, side="FR", effective_hip_offset_FR, config["fix_hip"])
         return np.array(ca.DM(p)).flatten()
     p0_abs_static = fk_numeric(q_static)
     

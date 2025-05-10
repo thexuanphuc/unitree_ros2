@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from kinematics import compute_robot_com
 import numpy as np
 
 # -------------------------------
@@ -220,7 +221,7 @@ def animate_mpc(joint_positions_FR, foot_traj_FR, trunk_dims, trunk_center,
         return lines_FR + lines_FL + lines_RR + lines_RL + [line_FR_traj, com_marker]
     
     # Disable blit for compatibility with Poly3DCollection
-    anim = FuncAnimation(fig, update, frames=len(joint_positions_FR), interval=5, blit=False)
+    anim = FuncAnimation(fig, update, frames=len(joint_positions_FR), interval=1, blit=False)
     plt.show()
 
 # -------------------------------

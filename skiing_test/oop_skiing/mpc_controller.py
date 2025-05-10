@@ -1,6 +1,6 @@
 import casadi as ca
 import numpy as np
-
+from kinematics import forward_kinematics
 # -------------------------------
 # MPC controller for FR leg
 # -------------------------------
@@ -34,16 +34,15 @@ class MPCController:
         self.q_vars_lifting = [self.opti_lifting.variable(3) for _ in range(self.N_lift + 1)]
         self.dq_vars_lifting = [self.opti_lifting.variable(3) for _ in range(self.N_lift)]
 
-    def setup_problem_pushing(self, effective_hip_offset, distance_from_path_to_center):
+    def setup_problem_pushing(self, side:str="FR", path_distance:float=0.0):
         """
         this mpc is for pushing the foot on the floor
-        self.q_vars_pushing is the joint angle
+        path_distance is the coordinate of the path on y axis   
 
-        TODO: 
-            + add constraints for end position
+        self.q_vars_pushing is the joint angle
+        self.dq_vars_pushing is the joint velocity
         """
-        print("the intial position of the foot on the skateboard:", self.q0_FR_on_floor)
-        print("the angle limits for the joints:", self.q_min, self.q_max)
+        global_hip_offset = getattr(self.robot, f"global_hip_offset_{side}")
 
         # Initial position constraint
         self.opti_pushing.subject_to(self.q_vars_pushing[0] == self.q0_FR_on_floor)
@@ -67,8 +66,7 @@ class MPCController:
 
         # constraint for trajectory of the foot on the floor
         for k in range(self.N_pushing + 1):
-            p_foot = forward_kinematics(self.q_vars_pushing[k], self.robot, effective_hip_offset, self.fix_hip)
-            
+            p_foot = forward_kinematics(self.q_vars_pushing[k], self.robot, side=side, fix_hip=self.fix_hip).flatten()
             # constraint the length of the foot trajectory
             if k == 0:
                 self.x_foot_start = p_foot[0]
@@ -80,7 +78,7 @@ class MPCController:
         
             if k <= self.N_floor:
                 # constraint to keep the path on floor straight
-                cost += self.w_y * (p_foot[1] - distance_from_path_to_center) ** 2
+                cost += self.w_y * (p_foot[1] - path_distance) ** 2
                 # Ground contact constraint
                 self.opti_pushing.subject_to(p_foot[2] == 0)
 
@@ -124,10 +122,12 @@ class MPCController:
         dq_sol = np.array([sol.value(self.dq_vars_pushing[k]) for k in range(self.N_pushing)])
         return q_sol, dq_sol
 
-    def setup_problem_lifting(self, effective_hip_offset):
+    def setup_problem_lifting(self, side:str="FR"):
         """
         this mpc is for lifting the foot from skateboard to the floor
         """
+        global_hip_offset = getattr(self.robot, f"global_hip_offset_{side}")
+
         # Initial position constraint
         # TODO what is the position of the foot on the skateboard
         self.opti_lifting.subject_to(self.q_vars_lifting[0] == self.q0_FR_on_board)
@@ -147,8 +147,8 @@ class MPCController:
         cost = 0
         # constraint to ensure the foot does not go through the skateboard
         for k in range(self.N_lift + 1):
-            p_foot = forward_kinematics(self.q_vars_lifting[k], self.robot, effective_hip_offset, self.fix_hip)
-            
+            p_foot = forward_kinematics(self.q_vars_lifting[k], self.robot, side=side, fix_hip=self.fix_hip).flatten()
+
             # if the foot[1] < 0.24 (skate board size + 0.04), then foot[2] should be > 0.058 (skateboard height)
             alpha = -1000  # steepness of the sigmoid
             threshold = -0.21
@@ -177,16 +177,28 @@ class MPCController:
         self.opti_lifting.minimize(cost)
     
     def solve_lifting(self):
-        ipopt_opts = {"print_level": 0, "max_iter": 500, "tol": 1e-4}
+
+        ipopt_opts = {"print_level": 4, "max_iter": 500, "tol": 1e-4}
         self.opti_lifting.solver('ipopt', {"expand": True}, ipopt_opts)
-        for k in range(self.N_lift):
+        # self.opti_lifting.solver('sqpmethod', {'print_header': True, 'print_time': False, 'print_iteration': True})
+        # not to the end, because end position of foot should be on the floor -> constraint violations for the last step
+        for k in range(self.N_lift - 5):
             self.opti_lifting.set_initial(self.dq_vars_lifting[k], 0.0)
             self.opti_lifting.set_initial(self.q_vars_lifting[k], self.q0_FR_on_board)
+            # Check if initial guess is feasible
+            # print("Constraint violations: ---------------", self.opti_lifting.debug.constraint_violations())
+
         self.opti_lifting.set_initial(self.q_vars_lifting[self.N_lift], self.q0_FR_on_board)
-        
-        sol = self.opti_lifting.solve()
-        # get the solution for joint angles
-        q_sol = np.array([sol.value(self.q_vars_lifting[k]) for k in range(self.N_lift + 1)])
-        # get the solution for joint velocities
-        dq_sol = np.array([sol.value(self.dq_vars_lifting[k]) for k in range(self.N_lift)])
-        return q_sol, dq_sol
+        try:
+            sol = self.opti_lifting.solve()
+            # get the solution for joint angles
+            q_sol = np.array([sol.value(self.q_vars_lifting[k]) for k in range(self.N_lift + 1)])
+            # get the solution for joint velocities
+            dq_sol = np.array([sol.value(self.dq_vars_lifting[k]) for k in range(self.N_lift)])
+            return q_sol, dq_sol
+        except Exception as e:
+            print("Debugging values:")
+            print("Decision variables:", self.opti_lifting.debug.value(self.decision_vars))
+            print("Parameters:", self.opti_lifting.debug.value(self.parameters))
+            print("Objective:", self.opti_lifting.debug.value(self.objective))
+            raise e
