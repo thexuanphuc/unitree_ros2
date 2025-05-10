@@ -27,12 +27,12 @@ class MPCController:
         # for pushing MPC
         self.opti_pushing = ca.Opti()
         self.q_vars_pushing = [self.opti_pushing.variable(3) for _ in range(self.N_pushing + 1)]
-        self.dq_vars_pushing = [self.opti_pushing.variable(3) for _ in range(self.N_pushing)]
+        self.dq_vars_pushing = [self.opti_pushing.variable(3) for _ in range(self.N_pushing + 1)]
 
         # for lifting MPC
         self.opti_lifting = ca.Opti()
         self.q_vars_lifting = [self.opti_lifting.variable(3) for _ in range(self.N_lift + 1)]
-        self.dq_vars_lifting = [self.opti_lifting.variable(3) for _ in range(self.N_lift)]
+        self.dq_vars_lifting = [self.opti_lifting.variable(3) for _ in range(self.N_lift + 1)]
 
     def setup_problem_pushing(self, side:str="FR", path_distance:float=0.0):
         """
@@ -47,9 +47,9 @@ class MPCController:
         # Initial position constraint
         self.opti_pushing.subject_to(self.q_vars_pushing[0] == self.q0_FR_on_floor)
 
-        # Final position constraint to make it move in loop
+        # Final position constraint to make it move in loop, and zero velocity
         self.opti_pushing.subject_to(self.q_vars_pushing[self.N_pushing] == self.q0_FR_on_floor)
-
+        self.opti_pushing.subject_to(self.dq_vars_pushing[self.N_pushing] == np.zeros(3))
         # Dynamics and bounds for each step
         for k in range(self.N_pushing):
             # kinematics constraints
@@ -86,7 +86,7 @@ class MPCController:
                 # the part of trajecotry that is not on the floor
                 self.opti_pushing.subject_to(p_foot[2] >= min_lift_height)
 
-        for k in range(self.N_pushing):
+        for k in range(self.N_pushing+1):
             # this cost to minimize the velocity
             # TODO put into threshold function for velocity, not just zeros, that velocity should be smaller than some value
             cost += self.w_dq * ca.sumsqr(self.dq_vars_pushing[k] - 0)
@@ -119,7 +119,7 @@ class MPCController:
         q_sol = np.array([sol.value(self.q_vars_pushing[k]) for k in range(self.N_pushing + 1)])
 
         # get the solution for joint velocities
-        dq_sol = np.array([sol.value(self.dq_vars_pushing[k]) for k in range(self.N_pushing)])
+        dq_sol = np.array([sol.value(self.dq_vars_pushing[k]) for k in range(self.N_pushing + 1)])
         return q_sol, dq_sol
 
     def setup_problem_lifting(self, side:str="FR"):
@@ -132,8 +132,9 @@ class MPCController:
         # TODO what is the position of the foot on the skateboard
         self.opti_lifting.subject_to(self.q_vars_lifting[0] == self.q0_FR_on_board)
 
-        # Final position of lifting phase should the same as the initial position of pushing phase
+        # Final position of lifting phase should the same as the initial position of pushing phase, and zero velocity
         self.opti_lifting.subject_to(self.q_vars_lifting[self.N_lift] == self.q0_FR_on_floor)
+        self.opti_lifting.subject_to(self.dq_vars_lifting[self.N_lift] == np.zeros(3))
 
         # Dynamics and bounds for each step
         for k in range(self.N_lift):
@@ -161,7 +162,7 @@ class MPCController:
             penalty = self.w_board_penalty * (ca.fmin(0, p_foot[2] - min_height * condition)) ** 2
             cost += penalty
 
-        for k in range(self.N_lift):
+        for k in range(self.N_lift + 1):
             # this cost to minimize the velocity
             # TODO put into threshold function, that velocity should be smaller than some value
             # but do we really need this one???
@@ -194,7 +195,7 @@ class MPCController:
             # get the solution for joint angles
             q_sol = np.array([sol.value(self.q_vars_lifting[k]) for k in range(self.N_lift + 1)])
             # get the solution for joint velocities
-            dq_sol = np.array([sol.value(self.dq_vars_lifting[k]) for k in range(self.N_lift)])
+            dq_sol = np.array([sol.value(self.dq_vars_lifting[k]) for k in range(self.N_lift + 1)])
             return q_sol, dq_sol
         except Exception as e:
             print("Debugging values:")
