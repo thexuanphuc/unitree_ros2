@@ -87,7 +87,7 @@ def run_mpc_pushing():
     # find the position of others legs
     # for RR leg, we need to keep the foot more narrow
     d_x = (robot.global_hip_offset_RR + robot.hip_fixed_offset_RR)[0]
-    d_y = - config_skate_board["width"] / 2 + 0.025
+    d_y = - config_skate_board["width"] / 2 + 0.03
     d_z = board_top_z
     q0_RR_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot, side="RR")
 
@@ -98,7 +98,7 @@ def run_mpc_pushing():
     q0_FL_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot, side="FL")
     # for RL leg, we need to keep the foot more narrow
     d_x = (robot.global_hip_offset_RL + robot.hip_fixed_offset_RL)[0]
-    d_y = config_skate_board["width"] / 2 - 0.025
+    d_y = config_skate_board["width"] / 2 - 0.03
     d_z = board_top_z
     q0_RL_on_board = inverse_kinematics(np.array([d_x, d_y, d_z]), robot, side="RL")
 
