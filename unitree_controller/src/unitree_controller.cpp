@@ -1,7 +1,6 @@
 
 #include "unitree_controller/unitree_controller.hpp"
 
-#include "ament_index_cpp/get_package_share_directory.hpp"
 
 namespace unitree_controller
 {
@@ -62,42 +61,11 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
     RCLCPP_ERROR(get_node()->get_logger(), "'control_rate_' must be positive, got %lf.", control_rate_);
     return controller_interface::CallbackReturn::ERROR;
   }
+  
   // Load trajectory from JSON
-  try {
-    std::string pkg_share = ament_index_cpp::get_package_share_directory("unitree_controller");
-    std::string file_path = pkg_share + "/config/joint_trajectory.json";
-    std::ifstream file(file_path);
-    if (!file.is_open()) {
-      RCLCPP_ERROR(get_node()->get_logger(), "Failed to open %s", file_path.c_str());
-      controller_interface::CallbackReturn::ERROR;
-    }
-    nlohmann::json json_data;
-    file >> json_data;
-    for (const auto & row : json_data) {
-      std::vector<double> joints;
-      for (const auto & value : row) {
-        joints.push_back(value.get<double>());
-      }
-      if (joints.size() != 3) {
-        RCLCPP_ERROR(get_node()->get_logger(), "Invalid row size in trajectory");
-        controller_interface::CallbackReturn::ERROR;
-      }
-      joint_trajectory_.push_back(joints);
-    }
-
-    // printout the trajectory
-    for (size_t i = 0; i < joint_trajectory_.size(); ++i) {
-      RCLCPP_INFO(get_node()->get_logger(), "Trajectory point %zu: [%f, %f, %f]", i, joint_trajectory_[i][0], joint_trajectory_[i][1], joint_trajectory_[i][2]);
-    }
-
-    RCLCPP_INFO(get_node()->get_logger(), "Loaded trajectory with %zu points", joint_trajectory_.size());
-    if (joint_trajectory_.size() != 101) {
-      RCLCPP_ERROR(get_node()->get_logger(), "Expected 101 points, got %zu", joint_trajectory_.size());
-      controller_interface::CallbackReturn::ERROR;
-    }
-  } catch (const std::exception & e) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory: %s", e.what());
-    controller_interface::CallbackReturn::ERROR;
+  if (!this->loadConfigFiles()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory files");
+    return controller_interface::CallbackReturn::ERROR;
   }
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -112,6 +80,40 @@ std::vector<std::string> UnitreeController::get_sensor_names() const {
   return sensor_names_;  
 }
 
+bool UnitreeController::loadConfigFiles() {
+  bool success = true;
+  for (size_t i = 0; i < this->config_files_.size(); ++i) {
+    try {
+      std::ifstream file(this->config_files_[i].path);
+      if (!file.is_open()) {
+        RCLCPP_ERROR(get_node()->get_logger(), "Failed to open the Json file %s", this->config_files_[i].path.c_str());
+        success = false;
+        continue;
+      }
+
+      nlohmann::json json_data;
+      file >> json_data;
+      file.close();
+      for (const auto & row : json_data) {
+        std::vector<double> joints;
+        for (const auto & value : row) {
+          joints.push_back(value.get<double>());
+        }
+        joint_trajectory[i].push_back(joints);
+      }
+
+      RCLCPP_INFO(get_node()->get_logger(), "Loaded trajectory '%s' with %zu points", 
+                  this->config_files_[i].name.c_str(), joint_trajectory[i].size());
+
+    } catch (const std::exception & e) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory '%s': %s", 
+                   this->config_files_[i].name.c_str(), e.what());
+      success = false;
+    }
+  }
+  return success;
+}
+
 
 controller_interface::return_type UnitreeController::update(
     const rclcpp::Time & time, const rclcpp::Duration & period,
@@ -121,67 +123,92 @@ controller_interface::return_type UnitreeController::update(
   (void)period;
   (void)states;
   (void)time;
+  // TODO: use the sitting on board position
+  commands.qJ_cmd   = Eigen::Matrix<double, 12, 1>( this->joint_trajectory[4][0][0],
+                                                    this->joint_trajectory[4][1][0],
+                                                    this->joint_trajectory[4][2][0],
+                                                    this->joint_trajectory[4][3][0],      
+                                                    this->joint_trajectory[4][4][0],
+                                                    this->joint_trajectory[4][5][0],
+                                                    this->joint_trajectory[4][6][0],
+                                                    this->joint_trajectory[4][7][0],
+                                                    this->joint_trajectory[4][8][0],
+                                                    this->joint_trajectory[4][9][0],
+                                                    this->joint_trajectory[4][10][0],
+                                                    this->joint_trajectory[4][11][0]);
 
-  // control_mode_ = *control_mode_rt_buffer_.readFromRT();
+  commands.dqJ_cmd  = sitting_down_controller_.dqJ_cmd();
+  commands.tauJ_cmd = sitting_down_controller_.tauJ_cmd();
+  commands.Kp_cmd   = sitting_down_controller_.Kp_cmd();
+  commands.Kd_cmd   = sitting_down_controller_.Kd_cmd();
+
+
   this->control_mode_phuc_count += 1; 
-  if(this->control_mode_phuc_count < 2000){
-    commands.qJ_cmd   = zero_torque_controller_.qJ_cmd();
-    commands.dqJ_cmd  = zero_torque_controller_.dqJ_cmd();
-    commands.tauJ_cmd = zero_torque_controller_.tauJ_cmd();
-    commands.Kp_cmd   = zero_torque_controller_.Kp_cmd();
-    commands.Kd_cmd   = zero_torque_controller_.Kd_cmd();
-  }
-  if(this->control_mode_phuc_count >= 2000){
-    this->control_mode_phuc_count = 0;
-  }
-  
-  float alpha = 0.5 * (1.0 + std::sin(2.0 * M_PI * this->control_mode_phuc_count / 2000));  
-  // interpolate for position between 2 modes
-  commands.qJ_cmd   = (1.0 - alpha) * standing_up_controller_.qJ_cmd() + alpha * sitting_down_controller_.qJ_cmd();  
-  // commands.qJ_cmd   = zero_torque_controller_.qJ_cmd();
-  commands.dqJ_cmd  = standing_up_controller_.dqJ_cmd();
-  commands.tauJ_cmd = standing_up_controller_.tauJ_cmd();
-  commands.Kp_cmd   = standing_up_controller_.Kp_cmd();
-  commands.Kd_cmd   = standing_up_controller_.Kd_cmd();
-  return controller_interface::return_type::OK;
 
-  // TODO: take mode from RT buffer
-  // switch (control_mode_)
-  // {
-  //   case ControlMode::ZeroTorque: {
-  //     commands.qJ_cmd   = zero_torque_controller_.qJ_cmd();
-  //     commands.dqJ_cmd  = zero_torque_controller_.dqJ_cmd();
-  //     commands.tauJ_cmd = zero_torque_controller_.tauJ_cmd();
-  //     commands.Kp_cmd   = zero_torque_controller_.Kp_cmd();
-  //     commands.Kd_cmd   = zero_torque_controller_.Kd_cmd();
-  //     return controller_interface::return_type::OK;
-  //     break;
-  //   }
-  //   case ControlMode::StandingUp: {
-  //     commands.qJ_cmd   = standing_up_controller_.qJ_cmd();
-  //     commands.dqJ_cmd  = standing_up_controller_.dqJ_cmd();
-  //     commands.tauJ_cmd = standing_up_controller_.tauJ_cmd();
-  //     commands.Kp_cmd   = standing_up_controller_.Kp_cmd();
-  //     commands.Kd_cmd   = standing_up_controller_.Kd_cmd();
-  //     return controller_interface::return_type::OK;
-  //     break;
-  //   }
-  //   case ControlMode::SittingDown: {
-  //     commands.qJ_cmd   = sitting_down_controller_.qJ_cmd();
-  //     commands.dqJ_cmd  = sitting_down_controller_.dqJ_cmd();
-  //     commands.tauJ_cmd = sitting_down_controller_.tauJ_cmd();
-  //     commands.Kp_cmd   = sitting_down_controller_.Kp_cmd();
-  //     commands.Kd_cmd   = sitting_down_controller_.Kd_cmd();
-  //     return controller_interface::return_type::OK;
-  //     break;
-  //   }
-  //   default: {
-  //     controller_interface::CallbackReturn::ERROR;
-  //     break;
-  //   }
-  // }
+  bool is_pushing = true;
+  // use 5 iterations to track the trajectory
+  int iteration_tracking = 5;
+
+  // pusing mode
+  if (is_pushing) {
+    int trajectory_length = this->joint_trajectory[0].size();
+    RCLCPP_INFO(get_node()->get_logger(), "Control mode phuc count: %d", this->control_mode_phuc_count);
+    if(this->control_mode_phuc_count >= 2000 + trajectory_length * iteration_tracking){
+      this->control_mode_phuc_count = 2000;
+    }
   
-  controller_interface::CallbackReturn::ERROR;
+    if(this->control_mode_phuc_count >= 2000 && this->control_mode_phuc_count < 2000 + trajectory_length * iteration_tracking) {
+      // try to move the left front legs along the trajectory
+      int current_index = static_cast<int>(floor((this->control_mode_phuc_count - 2000) / iteration_tracking));
+      RCLCPP_INFO(get_node()->get_logger(), "current index: %d", current_index);
+
+      commands.qJ_cmd.segment(3, 3) = Eigen::Vector3d(this->joint_trajectory[0][current_index][0],
+                                                      this->joint_trajectory[0][current_index][1],
+                                                      this->joint_trajectory[0][current_index][2]);
+      commands.dqJ_cmd.segment(3, 3) = Eigen::Vector3d(this->joint_trajectory[1][current_index][0],
+                                                      this->joint_trajectory[1][current_index][1],
+                                                      this->joint_trajectory[1][current_index][2]);                                         
+  
+      RCLCPP_INFO(get_node()->get_logger(), "Moving right front leg to position: %f, %f, %f", 
+                    commands.qJ_cmd[3], commands.qJ_cmd[4], commands.qJ_cmd[5]);
+      return controller_interface::return_type::OK;
+    }
+  }
+  // lifting mode
+  else 
+  {
+    int trajectory_length = this->joint_trajectory[2].size();
+    RCLCPP_INFO(get_node()->get_logger(), "Control mode phuc count: %d", this->control_mode_phuc_count);
+    if(this->control_mode_phuc_count >= 2000 + trajectory_length * iteration_tracking){
+      this->control_mode_phuc_count = 2000;
+      this->is_lifting = !this->is_lifting;
+    }
+    if(this->control_mode_phuc_count > 2000 && this->control_mode_phuc_count < 2000 + trajectory_length * iteration_tracking) {
+      int current_index = 0;
+      if(!this->is_lifting) {
+        current_index = static_cast<int>(floor((this->control_mode_phuc_count - 2000) / iteration_tracking));
+        RCLCPP_INFO(get_node()->get_logger(), "current index not lifting: %d", current_index);
+      }
+      else {
+        current_index = trajectory_length -1 - static_cast<int>(floor((this->control_mode_phuc_count - 2000) / iteration_tracking));
+        RCLCPP_INFO(get_node()->get_logger(), "current index lifting: %d", current_index);
+      }
+
+      // try to move the left front legs along the trajectory
+      commands.qJ_cmd.segment(3, 3) = Eigen::Vector3d(this->joint_trajectory[2][current_index][0],
+                                                      this->joint_trajectory[2][current_index][1],
+                                                      this->joint_trajectory[2][current_index][2]);
+      commands.dqJ_cmd.segment(3, 3) = Eigen::Vector3d(this->joint_trajectory[3][current_index][0],
+                                                      this->joint_trajectory[3][current_index][1],
+                                                      this->joint_trajectory[3][current_index][2]);                                         
+  
+      RCLCPP_INFO(get_node()->get_logger(), "Moving right front leg to position: %f, %f, %f", 
+                  commands.qJ_cmd[3], commands.qJ_cmd[4], commands.qJ_cmd[5]);
+      return controller_interface::return_type::OK;
+    }
+  }
+
+  return controller_interface::return_type::ERROR;
 }
 
 void UnitreeController::setControlModeCallback(const std::shared_ptr<unitree_msgs::srv::SetControlMode::Request> request,

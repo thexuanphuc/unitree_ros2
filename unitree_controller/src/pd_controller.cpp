@@ -48,13 +48,17 @@ PDController PDController::StandingUpController()
 PDController PDController::SittingDownController() 
 {
   Vector12d qJ;
-  qJ << -0.19, 1.0, -2.5, 
-        0.19, 1.0, -2.5, 
-        -0.19, 0.8, -2.3, 
-        0.19, 0.8, -2.3;
+  // qJ << -0.19, 1.0, -2.5, 
+  //       0.19, 1.0, -2.5, 
+  //       -0.19, 0.8, -2.3, 
+  //       0.19, 0.8, -2.3;
+  qJ << 0.0, 0.0, 0.0, 
+        0.0, 0.0, 0.0, 
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0;
   const Vector12d dqJ = Vector12d::Zero();
   const Vector12d tauJ = Vector12d::Zero();
-  const Vector12d Kp = Vector12d::Constant(50.0); // original value is 10 
+  const Vector12d Kp = Vector12d::Constant(40.0); // original value is 10 
   const Vector12d Kd = Vector12d::Constant(15.0); // original value is 15 
   return PDController(std::move(qJ), std::move(dqJ), std::move(tauJ), std::move(Kp), std::move(Kd));
 }

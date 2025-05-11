@@ -32,8 +32,6 @@ find_package(unitree_msgs REQUIRED)
 find_package(controller_manager REQUIRED)
 find_package(unitree_gazebo REQUIRED)
 find_package(std_msgs REQUIRED)
-# list(APPEND CMAKE_PREFIX_PATH "/opt/vcpkg/installed/x64-linux/share/xtensor")
-# find_package(xtensor CONFIG REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 
