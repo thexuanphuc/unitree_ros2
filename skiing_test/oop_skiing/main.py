@@ -55,26 +55,33 @@ def run_mpc_pushing():
     ####################### status 1: move the body to the right ##########################
     new_trunk_center = robot.trunk_center.copy()
     new_trunk_center[1] -= config["com_shifting"]
+    print("the  trunk center is before moving_body  ------------------->", robot.trunk_center)
     trajectory_movebody_1 = moving_body(robot=robot, final_trunk_center=new_trunk_center, q_initial=onboard_sitting, N=100, fix_hip=config["fix_hip"])
-    ####################### status 2: move one font-left leg into center ##########################
+    print("the  trunk center is after moving_body  ------------------->", robot.trunk_center)
+    ####################### status 2: move one front-left leg into center ##########################
     
     # MPC on kinematics model to find the foot trajectory
     mpc = MPCController(config)
-    center_foot = np.array([(robot.global_hip_offset_FL+ robot.hip_fixed_offset_FL)[0], robot.trunk_center[1], board_top_z])
+
+    # TODO this foot position should be the center of the robot, maybe problem that the trucnk was moved outside, but not moved inside when
+    # center_foot = np.array([(robot.global_hip_offset_FL+ robot.hip_fixed_offset_FL)[0], robot.trunk_center[1], board_top_z])
+    # lower the foot position a little bit to avoid the collision with the board
+    center_foot = np.array([(robot.global_hip_offset_FL+ robot.hip_fixed_offset_FL)[0], 0.018, board_top_z])
+
     q0_center_foot = inverse_kinematics(center_foot, robot, side="FL")
     q_current_FL = trajectory_movebody_1[-1,:3].copy()
 
     # debug
     print("the initial position of the foot is ------------------->", forward_kinematics(q_current_FL, robot, side="FL", fix_hip=config["fix_hip"]))
-    trajectory_moveleg, trajectory_moveleg_vel = mpc.setup_problem_simple_moving_leg(cur_robot=robot, side="FL", initial_pose=q_current_FL, final_pose=q0_center_foot, N_steps=100, min_height=board_top_z+0.02)
+    print("the target position of the foot is ------------------->", center_foot)
+    trajectory_moveleg, trajectory_moveleg_vel = mpc.setup_problem_simple_moving_leg(cur_robot=robot, side="FL", initial_pose=q_current_FL, final_pose=q0_center_foot, N_steps=100, min_height=board_top_z+0.04)
+    print("the center of trunk is ------------------->", robot.trunk_center)
 
     ####################### status 3: move the body back to center ##########################
 
     # the front left leg configuration was changed, because it was moved to the center
     q_initial_new = trajectory_movebody_1[-1,:].copy().reshape(4, 3)
-    print("the shape of q_initial_new is ------------------->", q_initial_new.shape)
     q_initial_new[0,:] = trajectory_moveleg[-1,:].copy().reshape(1, 3)
-    print("the shape of q_initial_new is ------------------->", q_initial_new.shape)
     
     new_trunk_center = robot.trunk_center.copy()
     new_trunk_center[1] += config["com_shifting"]
@@ -83,6 +90,7 @@ def run_mpc_pushing():
 
     ####################### status 4: move the right leg from board to the floor ##########################
     distance_from_path_to_center = -config_skate_board["distance_from_edge"] +  (robot.global_hip_offset_FR + robot.hip_fixed_offset_FR)[1]
+    print("the distance from path to center is ------------------->", distance_from_path_to_center)
     # find the foot position when FR leg is on the floor in flobal frame
     d_x = (robot.global_hip_offset_FR + robot.hip_fixed_offset_FR)[0]
     d_y = distance_from_path_to_center
@@ -100,9 +108,9 @@ def run_mpc_pushing():
     # for pushing phase
     trajectory_FR_pushing, trajectory_FR_pushing_vel = mpc.setup_problem_pushing(cur_robot = robot, side="FR", path_distance=distance_from_path_to_center, q0_FR_on_floor=q0_FR_on_floor)
 
-
     ####################### status 6: move the front right leg back to the skateboard (because the velocity is opposite) ##########################
-    # trajectory_FR_up, trajectory_FR_up_vel = mpc.setup_problem_lifting(side="FR", q0_FR_on_board=q0_FR_on_floor, q0_FR_on_floor=onboard_sitting[1,:])
+    # trajectory_FR_up, trajectory_FR_up_vel = mpc.setup_problem_lifting(cur_robot = robot, side="FR", q0_FR_on_board=q0_FR_on_floor, q0_FR_on_floor=q_current_FR)
+
     trajectory_FR_up = trajectory_FR_down[::-1]
     trajectory_FR_up_vel = -1 * trajectory_FR_down_vel[::-1]
 
@@ -165,7 +173,7 @@ def run_mpc_pushing():
         lf = np.linalg.norm(pos[3] - pos[2])
         print(f"{leg}: Hip-Knee: {lk:.3f}, Knee-Ankle: {la:.3f}, Ankle-Foot: {lf:.3f}")
 
-    animate_mpc(joint_positions_FR, left_foot, robot.trunk_dims, trunk_center,
+    animate_mpc(joint_positions_FR, foot_traj_FR, robot.trunk_dims, trunk_center,
                 static_positions_FL, static_positions_RR, static_positions_RL, board_top_z, robot.link_masses)
 
     return q_sol_FR

@@ -25,7 +25,9 @@ default_config = {
          "q_max": [ 0.80,  4.19, -0.92]
     },
     # Parameter for shifting the center of mass (trunk) in com_transfering mode
-    "com_shifting": 0.08  
+    "com_shifting": 0.08,
+    # number of steps for shifting the center of mass
+    "N_lean": 100, 
 }
 
 hip_target = np.deg2rad(0)  # initial hip-roll value (in radians)
@@ -149,3 +151,5 @@ class RobotModel:
         self.global_hip_offset_FL = self.trunk_center + (self.hip_offset_FL)
         self.global_hip_offset_RR = self.trunk_center + (self.hip_offset_RR)
         self.global_hip_offset_RL = self.trunk_center + (self.hip_offset_RL)
+        print("the center of trunk is ------------------->", self.trunk_center)
+        print("global_hip_offset_FL was recalculated ------------------->", self.global_hip_offset_FL)

@@ -118,7 +118,7 @@
     </inertial>
   </link>
   <joint name="FR_hip_fixed" type="fixed">
-    <origin rpy="0 0 0" xyz="0 -0.081 0"/>
+    <origin rpy="0 0 0" xyz="0 -0.0838 0"/>
     <parent link="FR_hip"/>
     <child link="FR_thigh_shoulder"/>
   </joint>
@@ -160,7 +160,7 @@
     </inertial>
   </link>
   <joint name="FR_calf_joint" type="revolute">
-    <origin rpy="0 0 0" xyz="0 0 -0.2"/>
+    <origin rpy="0 0 0" xyz="0 0 -0.22"/>
     <parent link="FR_thigh"/>
     <child link="FR_calf"/>
     <axis xyz="0 1 0"/>
@@ -188,7 +188,7 @@
     </inertial>
   </link>
   <joint name="FR_foot_fixed" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0 -0.2"/>
+    <origin rpy="0 0 0" xyz="0 0 -0.22"/>
     <parent link="FR_calf"/>
     <child link="FR_foot"/>
   </joint>
@@ -288,7 +288,7 @@
     </inertial>
   </link>
   <joint name="FL_hip_fixed" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0.081 0"/>
+    <origin rpy="0 0 0" xyz="0 0.0838 0"/>
     <parent link="FL_hip"/>
     <child link="FL_thigh_shoulder"/>
   </joint>
@@ -440,7 +440,7 @@
     </inertial>
   </link>
   <joint name="RR_hip_fixed" type="fixed">
-    <origin rpy="0 0 0" xyz="0 -0.081 0"/>
+    <origin rpy="0 0 0" xyz="0 -0.0838 0"/>
     <parent link="RR_hip"/>
     <child link="RR_thigh_shoulder"/>
   </joint>
@@ -592,7 +592,7 @@
     </inertial>
   </link>
   <joint name="RL_hip_fixed" type="fixed">
-    <origin rpy="0 0 0" xyz="0 0.081 0"/>
+    <origin rpy="0 0 0" xyz="0 0.0838 0"/>
     <parent link="RL_hip"/>
     <child link="RL_thigh_shoulder"/>
   </joint>

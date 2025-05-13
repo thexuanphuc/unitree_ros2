@@ -1,6 +1,8 @@
 import numpy as np
 import casadi as ca
 from robot_model import RobotModel
+from config_skate_board import config_skate_board   
+
 # -------------------------------
 # Rotation matrices functions (notice the rotation along y have different sign)
 # -------------------------------
@@ -172,3 +174,43 @@ def compute_robot_com(trunk_center, leg_positions, link_masses):
         com_sum = com_sum + com_leg
         total_mass += mass_leg
     return com_sum / total_mass if total_mass > 0 else trunk_center
+
+def moving_body(robot:RobotModel=None, final_trunk_center=None, q_initial=None, N:int=100, fix_hip=True):
+    """
+    we have the intial configuration of the legs, then find it's foot position of these legs
+    try to move the body to the new position but don't change the foot position
+
+    final_trunk_center is the new position of the trunk center in global frame
+    final_trunk_center = [x, y, z]
+    q_initial is the initial configuration for 4 legs of the robot
+    q_initial = [q_FL, q_FR, q_RL, q_RR]
+    N: is the number of steps for moving the body
+
+
+    return the trajectory of the joint angles for 4 legs that move the body
+    """
+
+    # calculate the initial configuration of the foot
+    foot_FL = forward_kinematics(q_initial[0, :].squeeze(), robot, side="FL", fix_hip=fix_hip)
+    foot_FR = forward_kinematics(q_initial[1, :].squeeze(), robot, side="FR", fix_hip=fix_hip)
+    foot_RL = forward_kinematics(q_initial[2, :].squeeze(), robot, side="RL", fix_hip=fix_hip)
+    foot_RR = forward_kinematics(q_initial[3, :].squeeze(), robot, side="RR", fix_hip=fix_hip)
+
+    # change the trunk position
+    robot.set_trunk_center(final_trunk_center)
+
+    # calculate the new configuration of the foot
+    q_final = np.zeros_like(q_initial)
+    q_final[0,:] = inverse_kinematics(foot_FL, robot, side="FL")
+    q_final[1,:] = inverse_kinematics(foot_FR, robot, side="FR")
+    q_final[2,:] = inverse_kinematics(foot_RL, robot, side="RL")
+    q_final[3,:] = inverse_kinematics(foot_RR, robot, side="RR")
+
+    # interpolate the joint angles
+    interp = np.linspace(0, 1, num=N)
+    q_initial = q_initial.reshape(-1)
+    q_final = q_final.reshape(-1)
+
+    q_trajectory = np.array([q_initial + (q_final - q_initial) * t for t in interp])
+
+    return q_trajectory
