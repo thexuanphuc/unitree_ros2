@@ -12,7 +12,8 @@ UnitreeController::UnitreeController()
   zero_torque_controller_(PDController::ZeroTorqueController()), 
   standing_up_controller_(PDController::StandingUpController()), 
   sitting_down_controller_(PDController::SittingDownController()),
-  mpc_start_push_(MpcStartPush::Zero()) // Initialize MpcStartPush
+  mpc_start_push_(MpcStartPush::Zero()), // Initialize MpcStartPush
+  mpc_turning_(MpcStartTurning::Zero()) // Initialize MpcStartTurning
 {
 }
 
@@ -48,11 +49,19 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
     RCLCPP_ERROR(get_node()->get_logger(), "'control_rate_' must be positive, got %lf.", control_rate_);
     return controller_interface::CallbackReturn::ERROR;
   }
-  
-  // Load trajectory using MpcStartPush
-  if(!mpc_start_push_.load_config()) {
-    RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory files");
+  if(this->is_turning_){
+    if(!mpc_turning_.load_config()) {
+      RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory files for turning");
+      return controller_interface::CallbackReturn::ERROR;
+    }
+  }
+  else{
+    // Load trajectory using MpcStartPush
+    if(!mpc_start_push_.load_config()) {
+    RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory files for pushing");
     return controller_interface::CallbackReturn::ERROR;
+  }
+
   }
   RCLCPP_INFO(get_node()->get_logger(), "Loaded trajectory files successfully");
   return controller_interface::CallbackReturn::SUCCESS;
@@ -75,15 +84,26 @@ controller_interface::return_type UnitreeController::update(
   (void)period;
   (void)states;
   (void)time;
-
-  // Compute desired trajectory using MpcStartPush and unpack tuple
-  auto [qJ_cmd, dqJ_cmd, tauJ_cmd, Kp_cmd, Kd_cmd, mode] = mpc_start_push_.compute_desired_trajectory();
-  RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d", mode);
-  commands.qJ_cmd = qJ_cmd;
-  commands.dqJ_cmd = dqJ_cmd;
-  commands.tauJ_cmd = tauJ_cmd;
-  commands.Kp_cmd = Kp_cmd;
-  commands.Kd_cmd = Kd_cmd;
+  if(this->is_turning_){
+    // Compute desired trajectory using MpcStartTurning and unpack tuple
+    auto [qJ_cmd, dqJ_cmd, tauJ_cmd, Kp_cmd, Kd_cmd, mode] = mpc_turning_.compute_desired_trajectory();
+    RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d", mode);
+    commands.qJ_cmd = qJ_cmd;
+    commands.dqJ_cmd = dqJ_cmd;
+    commands.tauJ_cmd = tauJ_cmd;
+    commands.Kp_cmd = Kp_cmd;
+    commands.Kd_cmd = Kd_cmd;
+  }
+  else{
+    // Compute desired trajectory using MpcStartPush and unpack tuple
+    auto [qJ_cmd, dqJ_cmd, tauJ_cmd, Kp_cmd, Kd_cmd, mode] = mpc_start_push_.compute_desired_trajectory();
+    RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d", mode);
+    commands.qJ_cmd = qJ_cmd;
+    commands.dqJ_cmd = dqJ_cmd;
+    commands.tauJ_cmd = tauJ_cmd;
+    commands.Kp_cmd = Kp_cmd;
+    commands.Kd_cmd = Kd_cmd;
+  }
 
 
   return controller_interface::return_type::OK;

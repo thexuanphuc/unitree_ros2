@@ -10,7 +10,7 @@ default_config = {
     "step_length": 0.2,
     "swing_height": 0.07,
     "trajectory_type": "two_phase",
-    "N": 500,
+    "N": 350,
     "N_lift": 200,  # number of steps for lifting one foot from skateboard to the floor
     "dt": 0.01,
     "dq_max": 28.6,

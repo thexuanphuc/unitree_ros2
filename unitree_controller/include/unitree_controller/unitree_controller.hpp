@@ -6,7 +6,7 @@
 #include "unitree_controller/visibility_control.h"
 #include "unitree_controller/pd_controller.hpp"
 #include "unitree_controller/mpc_start_push.hpp"
-
+#include "unitree_controller/mpc_turning.hpp"
 #include "unitree_msgs/srv/set_control_mode.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -47,6 +47,9 @@ private:
   ControlMode control_mode_;
   PDController zero_torque_controller_, standing_up_controller_, sitting_down_controller_;
   MpcStartPush mpc_start_push_;
+  MpcStartTurning mpc_turning_;
+
+  bool is_turning_ = true;
 
   // Services
   rclcpp::Service<unitree_msgs::srv::SetControlMode>::SharedPtr set_contro_mode_srv_;

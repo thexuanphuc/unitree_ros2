@@ -55,9 +55,25 @@ def run_mpc_pushing():
     ####################### status 1: move the body to the right ##########################
     new_trunk_center = robot.trunk_center.copy()
     new_trunk_center[1] -= config["com_shifting"]
+    trunk_center_state11 = new_trunk_center.copy()
     print("the  trunk center is before moving_body  ------------------->", robot.trunk_center)
     trajectory_movebody_1 = moving_body(robot=robot, final_trunk_center=new_trunk_center, q_initial=onboard_sitting, N=1000, fix_hip=config["fix_hip"])
     print("the  trunk center is after moving_body  ------------------->", robot.trunk_center)
+
+    ####################### status 1.1: move the body to the right from right to the left, then to center ##########################
+    new_trunk_center = robot.trunk_center.copy()
+    new_trunk_center[1] += 2 * config["com_shifting"]
+    q_initial_new_state_11 = trajectory_movebody_1[-1,:].copy().reshape(4, 3)
+    trajectory_movebody_1_back = moving_body(robot=robot, final_trunk_center=new_trunk_center, q_initial=q_initial_new_state_11, N=2000, fix_hip=config["fix_hip"])
+    new_trunk_center = robot.trunk_center.copy()
+    new_trunk_center[1] -= config["com_shifting"]
+    q_initial_new_state_11 = trajectory_movebody_1_back[-1,:].copy().reshape(4, 3)
+
+    trajectory_movebody_1_center = moving_body(robot=robot, final_trunk_center=new_trunk_center, q_initial=q_initial_new_state_11, N=800, fix_hip=config["fix_hip"])
+
+    # move the trunk back to the center
+    robot.set_trunk_center(trunk_center_state11)
+
     ####################### status 2: move one front-left leg into center ##########################
     
     # MPC on kinematics model to find the foot trajectory
@@ -129,6 +145,8 @@ def run_mpc_pushing():
         "pushing_vel.json": trajectory_FR_pushing_vel,
         "lifting_up.json": trajectory_FR_up,
         "lifting_up_vel.json": trajectory_FR_up_vel,
+        "trajectory_movebody_1_back.json": trajectory_movebody_1_back,
+        "trajectory_movebody_1_center.json": trajectory_movebody_1_center,
     }
 
     for filename, data in trajectories.items():
