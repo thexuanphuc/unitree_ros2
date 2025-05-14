@@ -48,10 +48,6 @@ private:
   PDController zero_torque_controller_, standing_up_controller_, sitting_down_controller_;
   MpcStartPush mpc_start_push_;
 
-  // Control mode counter
-  int control_mode_phuc_count_ = 0;
-  int cur_index_ = 0;
-
   // Services
   rclcpp::Service<unitree_msgs::srv::SetControlMode>::SharedPtr set_contro_mode_srv_;
   realtime_tools::RealtimeBuffer<ControlMode> control_mode_rt_buffer_;

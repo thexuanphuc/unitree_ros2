@@ -10,6 +10,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "nlohmann/json.hpp"
 #include "ament_index_cpp/get_package_share_directory.hpp"
+#include <stdint.h>
 
 namespace unitree_controller
 {
@@ -31,9 +32,7 @@ public:
   }
 
   // Compute desired trajectory based on mode and index
-  std::tuple<Vector12d, Vector12d, Vector12d, Vector12d, Vector12d> compute_desired_trajectory(
-    const size_t mode, const int cur_index);
-
+  std::tuple<Vector12d, Vector12d, Vector12d, Vector12d, Vector12d, int> compute_desired_trajectory();
   // Load configuration files
   bool load_config();
 
@@ -55,7 +54,12 @@ private:
   Vector12d Kp_cmd_;
   Vector12d Kd_cmd_;
 
+  // zeros controller
+  const double PosStop_custom = (2.146E+9f);
+  const double VelStopF_custom = (16000.0f);
+
   // Trajectory tracking parameters
+  int control_mode_phuc_count_ = 0;
   int iteration_tracking_ = 3;
   int all_trajectory_length_ = 0;
   int max_count = 0;
@@ -90,6 +94,7 @@ private:
   std::array<std::vector<std::vector<double>>, 7> joint_trajectory_;
   std::array<std::vector<std::vector<double>>, 4> joint_velocity_trajectory_;
   bool is_lifting_ = false;
+  bool success = true;
 };
 
 } // namespace unitree_controller

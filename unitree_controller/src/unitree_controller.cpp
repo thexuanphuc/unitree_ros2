@@ -50,10 +50,11 @@ controller_interface::CallbackReturn UnitreeController::read_parameters()
   }
   
   // Load trajectory using MpcStartPush
-  if (!mpc_start_push_.load_config()) {
+  if(!mpc_start_push_.load_config()) {
     RCLCPP_ERROR(get_node()->get_logger(), "Failed to load trajectory files");
     return controller_interface::CallbackReturn::ERROR;
   }
+  RCLCPP_INFO(get_node()->get_logger(), "Loaded trajectory files successfully");
   return controller_interface::CallbackReturn::SUCCESS;
 }
 
@@ -71,33 +72,13 @@ controller_interface::return_type UnitreeController::update(
     const rclcpp::Time & time, const rclcpp::Duration & period,
     const UnitreeStates & states, UnitreeCommands & commands) 
 {
-  RCLCPP_DEBUG(get_node()->get_logger(), "UnitreeController::update called, computed commands, ready to send");
   (void)period;
   (void)states;
   (void)time;
 
-  control_mode_phuc_count_ += 1;
-  cur_index_ = static_cast<int>(floor(control_mode_phuc_count_ / mpc_start_push_.get_iteration_tracking()));
-
-  size_t mode = 0;
-  while (mode < mpc_start_push_.get_count_accumulation().size() && 
-         cur_index_ >= mpc_start_push_.get_count_accumulation()[mode]) {
-    ++mode;
-    RCLCPP_DEBUG(get_node()->get_logger(), "the mode was changed %ld", mode);
-  }
-
-  if (control_mode_phuc_count_ >= mpc_start_push_.get_max_count()) {
-    RCLCPP_INFO(get_node()->get_logger(), "Reached end, reset to mode 3, count: %d", 
-                mpc_start_push_.get_count_accumulation()[3]);
-    control_mode_phuc_count_ = mpc_start_push_.get_count_accumulation()[3] * mpc_start_push_.get_iteration_tracking();
-    cur_index_ = static_cast<int>(floor(control_mode_phuc_count_ / mpc_start_push_.get_iteration_tracking()));
-  }
-
-  RCLCPP_INFO(get_node()->get_logger(), "the mode is %ld", mode);
-
-  // Compute desired trajectory using MpcStartPush
   // Compute desired trajectory using MpcStartPush and unpack tuple
-  auto [qJ_cmd, dqJ_cmd, tauJ_cmd, Kp_cmd, Kd_cmd] = mpc_start_push_.compute_desired_trajectory(mode, cur_index_);
+  auto [qJ_cmd, dqJ_cmd, tauJ_cmd, Kp_cmd, Kd_cmd, mode] = mpc_start_push_.compute_desired_trajectory();
+  RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d", mode);
   commands.qJ_cmd = qJ_cmd;
   commands.dqJ_cmd = dqJ_cmd;
   commands.tauJ_cmd = tauJ_cmd;

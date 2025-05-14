@@ -15,25 +15,52 @@ MpcStartPush::MpcStartPush(const Vector12d& qJ, const Vector12d& dqJ, const Vect
   }
 }
 
-std::tuple<Vector12d, Vector12d, Vector12d, Vector12d, Vector12d> 
-MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
+std::tuple<Vector12d, Vector12d, Vector12d, Vector12d, Vector12d, int> 
+MpcStartPush::compute_desired_trajectory()
 {
-  Vector12d qJ_cmd = qJ_cmd_;
-  Vector12d dqJ_cmd = dqJ_cmd_;
+  control_mode_phuc_count_ += 1;
+
+  Vector12d qJ_cmd = Vector12d::Zero();
+  Vector12d dqJ_cmd = Vector12d::Zero();
   Vector12d tauJ_cmd = Vector12d::Zero();
   Vector12d Kp_cmd = Vector12d::Constant(90.0);
   Vector12d Kd_cmd = Vector12d::Constant(16.0);
+  // Set the command to zero torque initially , TODO dont do this
+  if(control_mode_phuc_count_ < 0) {
+    Vector12d qJ_cmd = Vector12d::Constant(this->PosStop_custom);
+    Vector12d dqJ_cmd = Vector12d::Constant(this->VelStopF_custom);
+
+    // return std::make_tuple(std::move(qJ_cmd), std::move(dqJ_cmd), std::move(tauJ_cmd), 
+    //                        std::move(Kp_cmd), std::move(Kd_cmd), -1);
+  }
+
+  cur_index_ = static_cast<int>(floor(control_mode_phuc_count_ / iteration_tracking_));
+
+  size_t mode = 0;
+  while (mode < count_accummulation_.size() && 
+         cur_index_ >= count_accummulation_[mode]) {
+    ++mode;
+    // RCLCPP_DEBUG(get_node()->get_logger(), "the mode was changed %ld", mode);
+  }
+
+  if (control_mode_phuc_count_ >= max_count) {
+    // RCLCPP_INFO(get_node()->get_logger(), "Reached end, reset to mode 3, count: %d", 
+                // count_accummulation_[3]);
+    control_mode_phuc_count_ = count_accummulation_[3] * iteration_tracking_;
+    cur_index_ = static_cast<int>(floor(control_mode_phuc_count_ / iteration_tracking_));
+  }
+
 
   switch (mode) {
     case 0: // Mode 0: Normal sitting on board
     {
       qJ_cmd = Eigen::Matrix<double, 12, 1>(
-        joint_trajectory_[mode][0][0], joint_trajectory_[mode][0][1],
-        joint_trajectory_[mode][0][2], joint_trajectory_[mode][0][3],
-        joint_trajectory_[mode][0][4], joint_trajectory_[mode][0][5],
-        joint_trajectory_[mode][0][6], joint_trajectory_[mode][0][7],
-        joint_trajectory_[mode][0][8], joint_trajectory_[mode][0][9],
-        joint_trajectory_[mode][0][10], joint_trajectory_[mode][0][11]
+        this->joint_trajectory_[mode][0][0], this->joint_trajectory_[mode][1][0],
+        this->joint_trajectory_[mode][2][0], this->joint_trajectory_[mode][3][0],
+        this->joint_trajectory_[mode][4][0], this->joint_trajectory_[mode][5][0],
+        this->joint_trajectory_[mode][6][0], this->joint_trajectory_[mode][7][0],
+        this->joint_trajectory_[mode][8][0], this->joint_trajectory_[mode][9][0],
+        this->joint_trajectory_[mode][10][0], this->joint_trajectory_[mode][11][0]
       );
       dqJ_cmd = Vector12d::Zero();
       break;
@@ -41,7 +68,7 @@ MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
 
     case 1: // Mode 1: Move body to the right
     {
-      int case_index = cur_index - count_accummulation_[mode-1];
+      int case_index = cur_index_ - count_accummulation_[mode-1];
       qJ_cmd = Eigen::Matrix<double, 12, 1>(
         joint_trajectory_[mode][case_index][0], joint_trajectory_[mode][case_index][1],
         joint_trajectory_[mode][case_index][2], joint_trajectory_[mode][case_index][3],
@@ -56,7 +83,7 @@ MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
 
     case 2: // Mode 2: Move the left leg to center
     {
-      int case_index = cur_index - count_accummulation_[mode-1];
+      int case_index = cur_index_ - count_accummulation_[mode-1];
       qJ_cmd.segment(3, 9) = Eigen::Matrix<double, 9, 1>(
         joint_trajectory_[mode-1].back()[3], joint_trajectory_[mode-1].back()[4],
         joint_trajectory_[mode-1].back()[5], joint_trajectory_[mode-1].back()[6],
@@ -80,7 +107,7 @@ MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
 
     case 3: // Mode 3: Move the body back to the left
     {
-      int case_index = cur_index - count_accummulation_[mode-1];
+      int case_index = cur_index_ - count_accummulation_[mode-1];
       qJ_cmd = Eigen::Matrix<double, 12, 1>(
         joint_trajectory_[mode][case_index][0], joint_trajectory_[mode][case_index][1],
         joint_trajectory_[mode][case_index][2], joint_trajectory_[mode][case_index][3],
@@ -95,7 +122,7 @@ MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
 
     case 4: // Mode 4: Move the right leg to the floor
     {
-      int case_index = cur_index - count_accummulation_[mode-1];
+      int case_index = cur_index_ - count_accummulation_[mode-1];
       qJ_cmd = Eigen::Matrix<double, 12, 1>(
         joint_trajectory_[mode-1].back()[0], joint_trajectory_[mode-1].back()[1],
         joint_trajectory_[mode-1].back()[2], joint_trajectory_[mode-1].back()[3],
@@ -120,7 +147,7 @@ MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
 
     case 5: // Mode 5: Push the front right leg on the floor N times
     {
-      int case_index = (cur_index - count_accummulation_[mode-1]) % joint_trajectory_[mode].size();
+      int case_index = (cur_index_ - count_accummulation_[mode-1]) % joint_trajectory_[mode].size();
       qJ_cmd = Eigen::Matrix<double, 12, 1>(
         joint_trajectory_[mode-2].back()[0], joint_trajectory_[mode-2].back()[1],
         joint_trajectory_[mode-2].back()[2], joint_trajectory_[mode-2].back()[3],
@@ -145,7 +172,7 @@ MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
 
     case 6: // Mode 6: Take the front right leg back to the skateboard
     {
-      int case_index = cur_index - count_accummulation_[mode-1];
+      int case_index = cur_index_ - count_accummulation_[mode-1];
       qJ_cmd = Eigen::Matrix<double, 12, 1>(
         joint_trajectory_[mode-3].back()[0], joint_trajectory_[mode-3].back()[1],
         joint_trajectory_[mode-3].back()[2], joint_trajectory_[mode-3].back()[3],
@@ -182,21 +209,19 @@ MpcStartPush::compute_desired_trajectory(const size_t mode, const int cur_index)
       break;
     }
 
-    default:
+    default: // waiting mode
     {
-      qJ_cmd = Vector12d::Zero();
-      dqJ_cmd = Vector12d::Zero();
       break;
     }
   }
 
+
   return std::make_tuple(std::move(qJ_cmd), std::move(dqJ_cmd), std::move(tauJ_cmd), 
-                         std::move(Kp_cmd), std::move(Kd_cmd));
+                         std::move(Kp_cmd), std::move(Kd_cmd), static_cast<int>(mode));
 }
 
 bool MpcStartPush::load_config()
 {
-  bool success = true;
   all_trajectory_length_ = 0;
 
   // Load position trajectory
@@ -247,7 +272,7 @@ bool MpcStartPush::load_config()
     }
   }
 
-  count_accummulation_.push_back(1000 * 1); // 1 state for sitting
+  count_accummulation_.push_back(2000 * 1); // 1 state for sitting
   count_accummulation_.push_back(count_accummulation_.back() + joint_trajectory_[1].size());
   count_accummulation_.push_back(count_accummulation_.back() + joint_trajectory_[2].size());
   count_accummulation_.push_back(count_accummulation_.back() + joint_trajectory_[3].size());
@@ -257,7 +282,7 @@ bool MpcStartPush::load_config()
   count_accummulation_.push_back(count_accummulation_.back() + 3000); // 7.5 seconds wait
   max_count = count_accummulation_.back() * iteration_tracking_;
 
-  return success;
+  return true;
 }
 
 } // namespace unitree_controller
