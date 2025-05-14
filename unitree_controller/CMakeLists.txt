@@ -43,6 +43,7 @@ add_library(${PROJECT_NAME} SHARED
   src/unitree_controller_interface.cpp
   src/unitree_controller.cpp
   src/pd_controller.cpp
+  src/mpc_start_push.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE
   include 
