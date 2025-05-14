@@ -126,12 +126,12 @@ MpcStartTurning::compute_desired_trajectory()
     case 5: // Mode 5: just sit down at the center for 7.5 seconds
     {
       qJ_cmd = Eigen::Matrix<double, 12, 1>(
-        this->joint_trajectory_[mode][0][0], this->joint_trajectory_[mode][1][0],
-        this->joint_trajectory_[mode][2][0], this->joint_trajectory_[mode][3][0],
-        this->joint_trajectory_[mode][4][0], this->joint_trajectory_[mode][5][0],
-        this->joint_trajectory_[mode][6][0], this->joint_trajectory_[mode][7][0],
-        this->joint_trajectory_[mode][8][0], this->joint_trajectory_[mode][9][0],
-        this->joint_trajectory_[mode][10][0], this->joint_trajectory_[mode][11][0]
+        this->joint_trajectory_[0][0][0], this->joint_trajectory_[0][1][0],
+        this->joint_trajectory_[0][2][0], this->joint_trajectory_[0][3][0],
+        this->joint_trajectory_[0][4][0], this->joint_trajectory_[0][5][0],
+        this->joint_trajectory_[0][6][0], this->joint_trajectory_[0][7][0],
+        this->joint_trajectory_[0][8][0], this->joint_trajectory_[0][9][0],
+        this->joint_trajectory_[0][10][0], this->joint_trajectory_[0][11][0]
       );
       dqJ_cmd = Vector12d::Zero();
       break;
