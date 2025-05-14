@@ -87,7 +87,7 @@ class MPCController:
                     # cost += self.w_y * (p_foot[1] - path_distance) ** 2
                     # self.opti_pushing.subject_to(p_foot[1] <= path_distance)
 
-                if k > self.N_floor + 30 and k < self.N_pushing - 30:
+                if k > self.N_floor + 45 and k < self.N_pushing - 45:
                     # the part of trajecotry that is not on the floor
                     self.opti_pushing.subject_to(p_foot[2] >= min_lift_height)
 
