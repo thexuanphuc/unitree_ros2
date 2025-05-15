@@ -20,10 +20,10 @@ MpcStartTurning::compute_desired_trajectory()
 {
   control_mode_phuc_count_ += 1;
 
-  Vector12d qJ_cmd = Vector12d::Zero();
-  Vector12d dqJ_cmd = Vector12d::Zero();
+  Vector12d qJ_cmd = Vector12d::Constant(this->PosStop_custom);
+  Vector12d dqJ_cmd = Vector12d::Constant(this->VelStopF_custom);
   Vector12d tauJ_cmd = Vector12d::Zero();
-  Vector12d Kp_cmd = Vector12d::Constant(90.0);
+  Vector12d Kp_cmd = Vector12d::Constant(100.0);
   Vector12d Kd_cmd = Vector12d::Constant(16.0);
   // Set the command to zero torque initially , TODO dont do this
   if(control_mode_phuc_count_ < 0) {
@@ -35,17 +35,16 @@ MpcStartTurning::compute_desired_trajectory()
   }
 
   cur_index_ = static_cast<int>(floor(control_mode_phuc_count_ / iteration_tracking_));
+  if (control_mode_phuc_count_ >= max_count) {
+    // reset the count to 0
+    control_mode_phuc_count_ = 0;
+    cur_index_ = static_cast<int>(floor(control_mode_phuc_count_ / iteration_tracking_));
+  }
 
   size_t mode = 0;
   while (mode < count_accummulation_.size() && 
          cur_index_ >= count_accummulation_[mode]) {
     ++mode;
-  }
-
-  if (control_mode_phuc_count_ >= max_count) {
-    // reset the count to 0
-    control_mode_phuc_count_ = 0;
-    cur_index_ = static_cast<int>(floor(control_mode_phuc_count_ / iteration_tracking_));
   }
 
 
@@ -178,7 +177,7 @@ bool MpcStartTurning::load_config()
 
   count_accummulation_.push_back(2000 * 1); // 1 state for sitting
   count_accummulation_.push_back(count_accummulation_.back() + joint_trajectory_[1].size()); // 1 move to the right
-  count_accummulation_.push_back(count_accummulation_.back() + 1000); // 2.5 seconds wait
+  count_accummulation_.push_back(count_accummulation_.back() + 4000); // 2.5 seconds wait
   count_accummulation_.push_back(count_accummulation_.back() + joint_trajectory_[2].size()); // 1 move to the left
   count_accummulation_.push_back(count_accummulation_.back() + joint_trajectory_[3].size()); // 1 move to the center
   count_accummulation_.push_back(count_accummulation_.back() + 3000); // 7.5 seconds wait

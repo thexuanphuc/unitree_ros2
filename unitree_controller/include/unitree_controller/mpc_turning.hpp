@@ -60,7 +60,7 @@ private:
 
   // Trajectory tracking parameters
   int control_mode_phuc_count_ = 0;
-  int iteration_tracking_ = 3;
+  int iteration_tracking_ = 1;
   int all_trajectory_length_ = 0;
   int max_count = 0;
   int cur_index_ = 0;
@@ -81,7 +81,7 @@ private:
 
 
   // Trajectory data
-  std::array<std::vector<std::vector<double>>, 7> joint_trajectory_;
+  std::array<std::vector<std::vector<double>>, 4> joint_trajectory_;
   bool success = true;
 };
 

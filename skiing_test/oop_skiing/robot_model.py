@@ -25,7 +25,7 @@ default_config = {
          "q_max": [ 0.80,  4.19, -0.92]
     },
     # Parameter for shifting the center of mass (trunk) in com_transfering mode
-    "com_shifting": 0.055,
+    "com_shifting": 0.046,
     # number of steps for shifting the center of mass
     "N_lean": 100, 
 }
