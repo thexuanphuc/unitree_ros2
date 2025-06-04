@@ -37,7 +37,7 @@ docker compose up a1
 
 ```
  ros2 topic echo /joint_states | awk '
-  /^header:/ { getline; getline; getline; print }
+  /^header:/ { getline; getline; print; getline; print }
   /^position:/ {
     print
     for(i=1; i<=12; i++) {getline; print }
