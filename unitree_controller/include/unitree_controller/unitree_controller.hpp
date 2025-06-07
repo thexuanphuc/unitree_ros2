@@ -5,21 +5,23 @@
 #include "unitree_controller/types.hpp"
 #include "unitree_controller/visibility_control.h"
 #include "unitree_controller/pd_controller.hpp"
-
+#include "unitree_controller/mpc_start_push.hpp"
+#include "unitree_controller/mpc_turning.hpp"
 #include "unitree_msgs/srv/set_control_mode.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
 #include "rclcpp/rclcpp.hpp"
 
+#include <string>
+#include <vector>
 
 namespace unitree_controller
 {
-
-using namespace std::chrono_literals;  // NOLINT
+using namespace std::chrono_literals; // NOLINT
 
 class UnitreeController : public UnitreeControllerInterface
 {
 public:
-  UNITREE_CONTROLLER_PUBLIC 
+  UNITREE_CONTROLLER_PUBLIC
   UnitreeController();
 
 private:
@@ -32,24 +34,29 @@ private:
   std::vector<std::string> get_sensor_names() const override;
 
   controller_interface::return_type update(
-  const rclcpp::Time & time, const rclcpp::Duration & period,
-  const UnitreeStates & states, UnitreeCommands & commands) override;
+    const rclcpp::Time& time, const rclcpp::Duration& period,
+    const UnitreeStates& states, UnitreeCommands& commands) override;
 
-  // interfaces
+  // Interfaces
   std::vector<std::string> joint_names_, sensor_names_;
 
-  // node parameters
+  // Node parameters
   double control_rate_, control_period_;
 
-  // Runtime controllers 
+  // Runtime controllers
   ControlMode control_mode_;
   PDController zero_torque_controller_, standing_up_controller_, sitting_down_controller_;
-  int control_mode_phuc_count = 0;
+  MpcStartPush mpc_start_push_;
+  MpcStartTurning mpc_turning_;
+
+  bool is_turning_ = true;
+
   // Services
   rclcpp::Service<unitree_msgs::srv::SetControlMode>::SharedPtr set_contro_mode_srv_;
   realtime_tools::RealtimeBuffer<ControlMode> control_mode_rt_buffer_;
-  void setControlModeCallback(const std::shared_ptr<unitree_msgs::srv::SetControlMode::Request> request,
-                              std::shared_ptr<unitree_msgs::srv::SetControlMode::Response> response);
+  void setControlModeCallback(
+    const std::shared_ptr<unitree_msgs::srv::SetControlMode::Request> request,
+    std::shared_ptr<unitree_msgs::srv::SetControlMode::Response> response);
 };
 
 } // namespace unitree_controller
