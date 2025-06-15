@@ -100,11 +100,11 @@ UnitreeControllerInterface::state_interface_configuration() const
   conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.x");
   conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.y");
   conf.names.push_back(sensor_names[0] + "/" + "linear_acceleration.z");
-  // // Foot force sensor states
-  // conf.names.push_back(sensor_names[1] + "/" + "force.z");
-  // conf.names.push_back(sensor_names[2] + "/" + "force.z");
-  // conf.names.push_back(sensor_names[3] + "/" + "force.z");
-  // conf.names.push_back(sensor_names[4] + "/" + "force.z");
+  // Foot force sensor states
+  conf.names.push_back(sensor_names[1] + "/" + "force.z");
+  conf.names.push_back(sensor_names[2] + "/" + "force.z");
+  conf.names.push_back(sensor_names[3] + "/" + "force.z");
+  conf.names.push_back(sensor_names[4] + "/" + "force.z");
   return conf;
 }
 
@@ -139,11 +139,11 @@ controller_interface::return_type UnitreeControllerInterface::update(
   {
     states_.imu_linear_acceleration.coeffRef(i) = imu_linear_acceleration_interface_[i].get().get_value();
   }
-  // // get foor force sensor states 
-  // for (std::size_t i = 0 ; i < 4; ++i) 
-  // {
-  //   states_.foot_force_sensor.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
-  // }
+  // get foor force sensor states 
+  for (std::size_t i = 0 ; i < 4; ++i) 
+  {
+    states_.foot_force_sensor.coeffRef(i) = foot_force_sensor_interface_[i].get().get_value();
+  }
 
   // update controller, it will generate the control command
   // this update() was implemented inside unitree controller
@@ -258,20 +258,20 @@ UnitreeControllerInterface::on_activate(const rclcpp_lifecycle::State &)
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  // // Foot force sensor interfaces
-  // foot_force_sensor_interface_.clear();
-  // for (std::size_t i = 0 ; i < 4; ++i) 
-  // {
-  //   controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[i+1]}, 
-  //                                                "force.z", foot_force_sensor_interface_);
-  // }
-  // if (foot_force_sensor_interface_.size() != 4) 
-  // {
-  //   RCLCPP_ERROR(
-  //     get_node()->get_logger(), "Expected %u foot_force_interface, got %lu.", 
-  //     4, foot_force_sensor_interface_.size());
-  //   return controller_interface::CallbackReturn::ERROR;
-  // }
+  // Foot force sensor interfaces
+  foot_force_sensor_interface_.clear();
+  for (std::size_t i = 0 ; i < 4; ++i) 
+  {
+    controller_interface::get_ordered_interfaces(state_interfaces_, {sensor_names[i+1]}, 
+                                                 "force.z", foot_force_sensor_interface_);
+  }
+  if (foot_force_sensor_interface_.size() != 4) 
+  {
+    RCLCPP_ERROR(
+      get_node()->get_logger(), "Expected %u foot_force_interface, got %lu.", 
+      4, foot_force_sensor_interface_.size());
+    return controller_interface::CallbackReturn::ERROR;
+  }
 
   // Joint command interfaces
   qJ_cmd_interface_.clear();

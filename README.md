@@ -49,3 +49,11 @@ docker compose up a1
 ' > selected_fields.txt
 
 ```
+
+
+
+## echo the foot force 
+
+```
+ros2 topic echo /dynamic_joint_states | grep -A 2 "force.z" >> foot_force.txt
+```
