@@ -46,6 +46,28 @@ docker compose up a1
     print
     for(i=1; i<=12; i++) {getline; print }
   }
-' > selected_fields.txt
+' > position_output.txt
 
+```
+
+
+
+## echo the foot force 
+
+```
+ros2 topic echo /dynamic_joint_states | awk '
+/sec:/ {print "sec: " $2}
+/nanosec:/ {print "nanosec: " $2}
+/- interface_names:/ {in_names=1; names=""; next}
+in_names && /^  - / {names = names $2 " "; next}
+in_names && !/^  - / {in_names=0}
+/^  values:/ {in_values=1; next}
+in_values && /^  - / {
+    if (names == "force.z ") {
+        print "force.z: " $2
+        in_values=0
+    }
+    next
+}
+' > force_output.txt
 ```
