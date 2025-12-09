@@ -30,7 +30,7 @@ find_package(Eigen3 REQUIRED)
 find_package(unitree_hardware REQUIRED)
 find_package(unitree_msgs REQUIRED)
 find_package(controller_manager REQUIRED)
-find_package(unitree_gazebo REQUIRED)
+# find_package(unitree_gazebo REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(ament_index_cpp REQUIRED)
@@ -61,7 +61,7 @@ ament_target_dependencies(${PROJECT_NAME}
   geometry_msgs
   Eigen3
   unitree_hardware
-  unitree_gazebo # i am not sure we need this in unitree_controller package, because the controller seems separate from the gazebo interface
+  # unitree_gazebo # i am not sure we need this in unitree_controller package, because the controller seems separate from the gazebo interface
   unitree_msgs
   controller_manager
   std_msgs
@@ -124,12 +124,11 @@ ament_export_dependencies(
   Eigen3
   unitree_hardware
   unitree_msgs
-  #  i guess we need this to run this package (when others try to call this package)
+  # unitree_gazebo#  i guess we need this to run this package (when others try to call this package)
   builtin_interfaces
   hardware_interface
   pluginlib
   controller_manager
-  unitree_gazebo
   std_msgs
   # xtensor
 )
