@@ -82,6 +82,10 @@ in_values && /^  - / {
 colcon build --packages-ignore lcm gazebo_ros2_control_demos unitree_gazebo unitree_teleop --cmake-args -Wno-dev && source  install/setup.bash  && ros2 launch unitree_controller a1_mujoco.launch.py
 ```
 
+in another terminal eg: phuc@pro:~/working/a1_sim/unitree_mujoco/simulate/build(master)$ 
+```bash
+sudo rm -f /dev/shm/UnitreeGo2Shm && make -j10 && ./unitree_mujoco -r a1 
+```
 + As we use the unitree mujoco, we just do 2 terminal here, as mujoco should run separatedly to avoid concurency.
 
 ## TODO: migration to mujoco:
