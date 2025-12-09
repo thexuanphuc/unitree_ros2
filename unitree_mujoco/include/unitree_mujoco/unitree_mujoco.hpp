@@ -21,6 +21,31 @@
 
 #include "unitree_mujoco/mujoco_interface_type_values.hpp"
 #include "unitree_mujoco/visibility_control.h"
+#include <a1_data_shared.h>
+
+// TODO: check the correspondance with mujoco
+namespace LEG_ORDER{
+  constexpr int FR_ = 0;       // leg index
+  constexpr int FL_ = 1;
+  constexpr int RR_ = 2;
+  constexpr int RL_ = 3;
+
+  constexpr int FR_0 = 0;      // joint index
+  constexpr int FR_1 = 1;      
+  constexpr int FR_2 = 2;
+
+  constexpr int FL_0 = 3;
+  constexpr int FL_1 = 4;
+  constexpr int FL_2 = 5;
+
+  constexpr int RR_0 = 6;
+  constexpr int RR_1 = 7;
+  constexpr int RR_2 = 8;
+
+  constexpr int RL_0 = 9;
+  constexpr int RL_1 = 10;
+  constexpr int RL_2 = 11;
+}
 
 namespace unitree_mujoco
 {
@@ -63,26 +88,31 @@ private:
                       imu_quaternion_, imu_gyroscope_, imu_accelerometer_, foot_force_sensor_;
   std::vector<double> qJ_cmd_, dqJ_cmd_, tauJ_cmd_, Kp_cmd_, Kd_cmd_;
 
-  static constexpr std::array<int, 12> joints_ = {UNITREE_LEGGED_SDK::FL_0, 
-                                                  UNITREE_LEGGED_SDK::FL_1, 
-                                                  UNITREE_LEGGED_SDK::FL_2,
-                                                  UNITREE_LEGGED_SDK::FR_0, 
-                                                  UNITREE_LEGGED_SDK::FR_1, 
-                                                  UNITREE_LEGGED_SDK::FR_2, 
-                                                  UNITREE_LEGGED_SDK::RL_0, 
-                                                  UNITREE_LEGGED_SDK::RL_1, 
-                                                  UNITREE_LEGGED_SDK::RL_2, 
-                                                  UNITREE_LEGGED_SDK::RR_0, 
-                                                  UNITREE_LEGGED_SDK::RR_1, 
-                                                  UNITREE_LEGGED_SDK::RR_2};
+  static constexpr std::array<int, 12> joints_ = {LEG_ORDER::FL_0, 
+                                                  LEG_ORDER::FL_1, 
+                                                  LEG_ORDER::FL_2,
+                                                  LEG_ORDER::FR_0, 
+                                                  LEG_ORDER::FR_1, 
+                                                  LEG_ORDER::FR_2, 
+                                                  LEG_ORDER::RL_0, 
+                                                  LEG_ORDER::RL_1, 
+                                                  LEG_ORDER::RL_2, 
+                                                  LEG_ORDER::RR_0, 
+                                                  LEG_ORDER::RR_1, 
+                                                  LEG_ORDER::RR_2};
 
-  static constexpr std::array<int, 4> feet_ = {UNITREE_LEGGED_SDK::FL_,
-                                               UNITREE_LEGGED_SDK::FR_,
-                                               UNITREE_LEGGED_SDK::RL_,
-                                               UNITREE_LEGGED_SDK::RR_};
+  static constexpr std::array<int, 4> feet_ = {LEG_ORDER::FL_,
+                                               LEG_ORDER::FR_,
+                                               LEG_ORDER::RL_,
+                                               LEG_ORDER::RR_};
+
+  a1_shm::SharedDataA1* shm_;
+  uint64_t seq0_, seq1_;
+  bool data_consistent = false;
 
 };
 
 }  // namespace unitree_mujoco
+
 
 #endif  // UNITREE_HARDWARE__UNITREE_HARDWARE_HPP_
