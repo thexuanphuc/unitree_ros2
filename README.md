@@ -71,3 +71,14 @@ in_values && /^  - / {
 }
 ' > force_output.txt
 ```
+
+## build and run
+
+  colcon build --packages-ignore lcm gazebo_ros2_control_demos  --cmake-args -Wno-dev && source  install/setup.bash  && ros2 launch unitree_controller a1.launch.py
+
+
++ As we use the unitree mujoco, we just do 2 terminal here, as mujoco should run separatedly to avoid concurency.
+
+## TODO: migration to mujoco:
+no, right now i have the unitree_mujoco package. it was well done but only for other model, not for A1. 
+now i want to take that as module (i has simulation, render etc)), then try to send data to that, the only thing is to rewrite the unitree_mujoco_bridge sdk1
