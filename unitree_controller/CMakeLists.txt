@@ -124,11 +124,12 @@ ament_export_dependencies(
   Eigen3
   unitree_hardware
   unitree_msgs
-  # unitree_gazebo#  i guess we need this to run this package (when others try to call this package)
+  #  i guess we need this to run this package (when others try to call this package)
   builtin_interfaces
   hardware_interface
   pluginlib
   controller_manager
+  # unitree_gazebo
   std_msgs
   # xtensor
 )
