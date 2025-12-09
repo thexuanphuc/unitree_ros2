@@ -357,34 +357,35 @@ hardware_interface::CallbackReturn UnitreeHardware::on_activate(
     {
       Kd_cmd_[i] = 0;
     }
+  }
 
-    for (std::size_t i = 0; i < 4; ++i) 
+  for (std::size_t i = 0; i < 4; ++i) 
+  {
+    if (std::isnan(imu_quaternion_[i]))
     {
-      if (std::isnan(imu_quaternion_[i]))
-      {
-        imu_quaternion_[i] = 0;
-        if (i == 3) imu_quaternion_[i] = 1;
-      }
-    }
-    for (std::size_t i = 0; i < 3; ++i) 
-    {
-      if (std::isnan(imu_gyroscope_[i]))
-      {
-        imu_gyroscope_[i] = 0;
-      }
-      if (std::isnan(imu_accelerometer_[i]))
-      {
-        imu_accelerometer_[i] = 0;
-      }
-    }
-    for (std::size_t i = 0; i < 4; ++i) 
-    {
-      if (std::isnan(foot_force_sensor_[i]))
-      {
-        foot_force_sensor_[i] = 0;
-      }
+      imu_quaternion_[i] = 0;
+      if (i == 3) imu_quaternion_[i] = 1;
     }
   }
+  for (std::size_t i = 0; i < 3; ++i) 
+  {
+    if (std::isnan(imu_gyroscope_[i]))
+    {
+      imu_gyroscope_[i] = 0;
+    }
+    if (std::isnan(imu_accelerometer_[i]))
+    {
+      imu_accelerometer_[i] = 0;
+    }
+  }
+  for (std::size_t i = 0; i < 4; ++i) 
+  {
+    if (std::isnan(foot_force_sensor_[i]))
+    {
+      foot_force_sensor_[i] = 0;
+    }
+  }
+  
 
   RCLCPP_INFO(
     rclcpp::get_logger("UnitreeHardware"), "System initialzed UnitreeHardware::on_activate()  ###############");
