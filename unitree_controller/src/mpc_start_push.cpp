@@ -23,8 +23,8 @@ MpcStartPush::compute_desired_trajectory()
   Vector12d qJ_cmd = Vector12d::Constant(this->PosStop_custom);
   Vector12d dqJ_cmd = Vector12d::Constant(this->VelStopF_custom);
   Vector12d tauJ_cmd = Vector12d::Zero();
-  Vector12d Kp_cmd = Vector12d::Constant(100.0);
-  Vector12d Kd_cmd = Vector12d::Constant(16.0);
+  Vector12d Kp_cmd = Vector12d::Constant(25.0);
+  Vector12d Kd_cmd = Vector12d::Constant(5.0);
   // Set the command to zero torque initially , TODO dont do this
   if(control_mode_phuc_count_ < 0) {
     Vector12d qJ_cmd = Vector12d::Constant(this->PosStop_custom);

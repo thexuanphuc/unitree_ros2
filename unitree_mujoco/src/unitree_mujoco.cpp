@@ -346,6 +346,7 @@ hardware_interface::CallbackReturn UnitreeMujoco::on_activate(
         RCLCPP_DEBUG(rclcpp::get_logger("UnitreeMujoco"), "The shared memory is not initialized, run the mujoco simulation first");
         return hardware_interface::CallbackReturn::ERROR;
   }
+
   RCLCPP_INFO(rclcpp::get_logger("UnitreeMujoco"), "Shared Memory Initialized from Ros2 Side ##############3");
   
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -393,12 +394,14 @@ hardware_interface::return_type UnitreeMujoco::write(
   const rclcpp::Time &  /* time */, const rclcpp::Duration & /* period */)
 {
 
-  // TODO: check the order of leg here
-  std::memcpy(shm_->mt_cmd_q   , &this->qJ_cmd_[0], a1_shm::NJ * sizeof(double));
-  std::memcpy(shm_->mt_cmd_dq  , &this->dqJ_cmd_[0], a1_shm::NJ * sizeof(double));
-  std::memcpy(shm_->mt_cmd_tau , &this->tauJ_cmd_[0], a1_shm::NJ * sizeof(double));
-  std::memcpy(shm_->mt_cmd_Kp  , &this->Kp_cmd_[0], a1_shm::NJ * sizeof(double));
-  std::memcpy(shm_->mt_cmd_Kd  , &this->Kd_cmd_[0], a1_shm::NJ * sizeof(double));
+
+  for (int i = 0; i < a1_shm::NJ; ++i) {
+    std::memcpy(&shm_->mt_cmd_q[i]   , &this->qJ_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_dq[i]  , &this->dqJ_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_tau[i] , &this->tauJ_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_Kp[i]  , &this->Kp_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_Kd[i]  , &this->Kd_cmd_[i], sizeof(double));
+  }
   return hardware_interface::return_type::OK;
 }
 

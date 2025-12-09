@@ -88,8 +88,8 @@ def generate_launch_description():
                 [FindPackageShare(description_package), description_file]
             ),
             " ",
-            "use_gazebo:=",
-            'false',
+            "pick_simulation:=",
+            'use_hardware',
             " ",
             "DEBUG:=",
             'true',
@@ -103,7 +103,7 @@ def generate_launch_description():
     # a1_description_path = os.path.join(
     #     get_package_share_directory('a1_description'))
     # xacro_file = os.path.join(a1_description_path, 'xacro', 'robot.xacro')
-    # robot_description = {'robot_description': Command(['xacro ', xacro_file, ' use_gazebo:=true DEBUG:=false'])}
+    # robot_description = {'robot_description': Command(['xacro ', xacro_file, ' pick_simulation:=true DEBUG:=false'])}
 
 
     robot_controllers = PathJoinSubstitution(

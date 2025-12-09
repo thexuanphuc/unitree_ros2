@@ -24,7 +24,7 @@
 #include <a1_data_shared.h>
 
 // TODO: check the correspondance with mujoco
-namespace LEG_ORDER{
+namespace LEG_ORDER_MUJOCO{
   constexpr int FR_ = 0;       // leg index
   constexpr int FL_ = 1;
   constexpr int RR_ = 2;
@@ -88,23 +88,24 @@ private:
                       imu_quaternion_, imu_gyroscope_, imu_accelerometer_, foot_force_sensor_;
   std::vector<double> qJ_cmd_, dqJ_cmd_, tauJ_cmd_, Kp_cmd_, Kd_cmd_;
 
-  static constexpr std::array<int, 12> joints_ = {LEG_ORDER::FL_0, 
-                                                  LEG_ORDER::FL_1, 
-                                                  LEG_ORDER::FL_2,
-                                                  LEG_ORDER::FR_0, 
-                                                  LEG_ORDER::FR_1, 
-                                                  LEG_ORDER::FR_2, 
-                                                  LEG_ORDER::RL_0, 
-                                                  LEG_ORDER::RL_1, 
-                                                  LEG_ORDER::RL_2, 
-                                                  LEG_ORDER::RR_0, 
-                                                  LEG_ORDER::RR_1, 
-                                                  LEG_ORDER::RR_2};
+  static constexpr std::array<int, 12> joints_ = {
+                                                  LEG_ORDER_MUJOCO::FR_0, 
+                                                  LEG_ORDER_MUJOCO::FR_1, 
+                                                  LEG_ORDER_MUJOCO::FR_2, 
+                                                  LEG_ORDER_MUJOCO::FL_0,
+                                                  LEG_ORDER_MUJOCO::FL_1,
+                                                  LEG_ORDER_MUJOCO::FL_2,
+                                                  LEG_ORDER_MUJOCO::RR_0, 
+                                                  LEG_ORDER_MUJOCO::RR_1, 
+                                                  LEG_ORDER_MUJOCO::RR_2,
+                                                  LEG_ORDER_MUJOCO::RL_0,
+                                                  LEG_ORDER_MUJOCO::RL_1,
+                                                  LEG_ORDER_MUJOCO::RL_2};
 
-  static constexpr std::array<int, 4> feet_ = {LEG_ORDER::FL_,
-                                               LEG_ORDER::FR_,
-                                               LEG_ORDER::RL_,
-                                               LEG_ORDER::RR_};
+  static constexpr std::array<int, 4> feet_ = {LEG_ORDER_MUJOCO::FR_,
+                                               LEG_ORDER_MUJOCO::FL_,
+                                               LEG_ORDER_MUJOCO::RR_,
+                                               LEG_ORDER_MUJOCO::RL_};
 
   a1_shm::SharedDataA1* shm_;
   uint64_t seq0_, seq1_;

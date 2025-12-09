@@ -49,7 +49,7 @@ private:
   MpcStartPush mpc_start_push_;
   MpcStartTurning mpc_turning_;
 
-  bool is_turning_ = true;
+  bool is_turning_ = false;
 
   // Services
   rclcpp::Service<unitree_msgs::srv::SetControlMode>::SharedPtr set_contro_mode_srv_;

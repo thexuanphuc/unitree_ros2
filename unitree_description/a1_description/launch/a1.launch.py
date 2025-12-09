@@ -12,7 +12,7 @@
 # #     a1_description_path = os.path.join(
 # #         get_package_share_directory('a1_description'))
 # #     xacro_file = os.path.join(a1_description_path, 'xacro', 'robot.xacro')
-# #     params = {'robot_description': Command(['xacro ', xacro_file, ' use_gazebo:=true DEBUG:=false']), 'use_sim_time': True}
+# #     params = {'robot_description': Command(['xacro ', xacro_file, ' pick_simulation:=true DEBUG:=false']), 'use_sim_time': True}
 
 # #     # params = {'robot_description': robot_desc}
 
@@ -83,7 +83,7 @@
 #     a1_description_path = os.path.join(
 #         get_package_share_directory('a1_description'))
 #     xacro_file = os.path.join(a1_description_path, 'xacro', 'robot.xacro')
-#     params = {'robot_description': Command(['xacro ', xacro_file, ' use_gazebo:=true DEBUG:=false']), 'use_sim_time': True}
+#     params = {'robot_description': Command(['xacro ', xacro_file, ' pick_simulation:=true DEBUG:=false']), 'use_sim_time': True}
 
 #     # this is for publishing the robot state to ROS 2
 #     rsp = Node(package='robot_state_publisher',

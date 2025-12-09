@@ -33,14 +33,14 @@ PDController PDController::ZeroTorqueController()
 PDController PDController::StandingUpController() 
 {
   Vector12d qJ;
-  qJ << -0.05, 0.67, -1.3, 
-        0.05, 0.67, -1.3, 
-        -0.05, 0.67, -1.3,
-        0.05, 0.67, -1.3;
+  qJ << -0.05, 0.07, -1.3,  // FR
+        0.05, 0.07, -1.3,   // FL
+        -0.05, 0.67, -1.3,  // RR
+        0.05, 0.67, -1.3;   // RL
   const Vector12d dqJ = Vector12d::Zero();
   const Vector12d tauJ = Vector12d::Zero();
-  const Vector12d Kp = Vector12d::Constant(50.0); // original value is 20 
-  const Vector12d Kd = Vector12d::Constant(15.0); // original value is 10 
+  const Vector12d Kp = Vector12d::Constant(15.0); // original value is 20 
+  const Vector12d Kd = Vector12d::Constant(1.0); // original value is 10 
   return PDController(std::move(qJ), std::move(dqJ), std::move(tauJ), std::move(Kp), std::move(Kd));
 }
 
@@ -58,8 +58,8 @@ PDController PDController::SittingDownController()
         0.0, 0.0, 0.0;
   const Vector12d dqJ = Vector12d::Zero();
   const Vector12d tauJ = Vector12d::Zero();
-  const Vector12d Kp = Vector12d::Constant(90.0); // original value is 10 
-  const Vector12d Kd = Vector12d::Constant(16.0); // original value is 15 
+  const Vector12d Kp = Vector12d::Constant(15.0); // original value is 10 
+  const Vector12d Kd = Vector12d::Constant(1.0); // original value is 15 
   return PDController(std::move(qJ), std::move(dqJ), std::move(tauJ), std::move(Kp), std::move(Kd));
 }
 

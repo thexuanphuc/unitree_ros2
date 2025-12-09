@@ -77,8 +77,24 @@ in_values && /^  - / {
   colcon build --packages-ignore lcm gazebo_ros2_control_demos  --cmake-args -Wno-dev && source  install/setup.bash  && ros2 launch unitree_controller a1.launch.py
 
 
+### new for mujoco
+```bash
+colcon build --packages-ignore lcm gazebo_ros2_control_demos unitree_gazebo unitree_teleop --cmake-args -Wno-dev && source  install/setup.bash  && ros2 launch unitree_controller a1_mujoco.launch.py
+```
+
 + As we use the unitree mujoco, we just do 2 terminal here, as mujoco should run separatedly to avoid concurency.
 
 ## TODO: migration to mujoco:
-no, right now i have the unitree_mujoco package. it was well done but only for other model, not for A1. 
-now i want to take that as module (i has simulation, render etc)), then try to send data to that, the only thing is to rewrite the unitree_mujoco_bridge sdk1
+
++ how to use the unitree_mujoco
+
++ problem: the shared memory sometimes works, some time does not,
++ also when reload in mujoco simulatino UI, it does not work 
++ we did unlink memory when we initialize the mujoco, so we should run the mujoco first
+
+
++ use alignment for shm, so it can be vectorized
+
++ refine the rvis, clean the code, dynamic changing of Kd, Kp (100, 15 for real hardware)
+
++ check the feedback data
