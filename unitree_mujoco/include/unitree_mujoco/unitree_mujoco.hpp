@@ -1,10 +1,10 @@
 #ifndef UNITREE_HARDWARE__UNITREE_HARDWARE_HPP_
 #define UNITREE_HARDWARE__UNITREE_HARDWARE_HPP_
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
-#include <array>
 
 #include "rclcpp/macros.hpp"
 
@@ -20,18 +20,17 @@
 #include "rclcpp_lifecycle/state.hpp"
 
 #include "unitree_mujoco/mujoco_interface_type_values.hpp"
-#include "unitree_mujoco/visibility_control.h"
 #include <a1_data_shared.h>
 
 // TODO: check the correspondance with mujoco
-namespace LEG_ORDER_MUJOCO{
-  constexpr int FR_ = 0;       // leg index
+namespace LEG_ORDER_MUJOCO {
+  constexpr int FR_ = 0; // leg index
   constexpr int FL_ = 1;
   constexpr int RR_ = 2;
   constexpr int RL_ = 3;
 
-  constexpr int FR_0 = 0;      // joint index
-  constexpr int FR_1 = 1;      
+  constexpr int FR_0 = 0; // joint index
+  constexpr int FR_1 = 1;
   constexpr int FR_2 = 2;
 
   constexpr int FL_0 = 3;
@@ -45,75 +44,56 @@ namespace LEG_ORDER_MUJOCO{
   constexpr int RL_0 = 9;
   constexpr int RL_1 = 10;
   constexpr int RL_2 = 11;
-}
+} // namespace LEG_ORDER_MUJOCO
 
-namespace unitree_mujoco
-{
-class UnitreeMujoco final : public hardware_interface::SystemInterface
-{
+namespace unitree_mujoco {
+class UnitreeMujoco final : public hardware_interface::SystemInterface {
 public:
   RCLCPP_SHARED_PTR_DEFINITIONS(UnitreeMujoco)
 
-  UNITREE_MUJOCO_PUBLIC
   UnitreeMujoco();
 
-  UNITREE_MUJOCO_PUBLIC
-  hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareInfo & info) override;
+  hardware_interface::CallbackReturn
+  on_init(const hardware_interface::HardwareInfo &info) override;
 
-  UNITREE_MUJOCO_PUBLIC
-  std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
+  std::vector<hardware_interface::StateInterface>
+  export_state_interfaces() override;
 
-  UNITREE_MUJOCO_PUBLIC
-  std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
+  std::vector<hardware_interface::CommandInterface>
+  export_command_interfaces() override;
 
-  UNITREE_MUJOCO_PUBLIC
-  hardware_interface::CallbackReturn on_activate(
-    const rclcpp_lifecycle::State & previous_state) override;
+  hardware_interface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &previous_state) override;
 
-  UNITREE_MUJOCO_PUBLIC
-  hardware_interface::CallbackReturn on_deactivate(
-    const rclcpp_lifecycle::State & previous_state) override;
+  hardware_interface::CallbackReturn
+  on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
 
-  UNITREE_MUJOCO_PUBLIC
-  hardware_interface::return_type read(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  hardware_interface::return_type read(const rclcpp::Time &time,
+                                       const rclcpp::Duration &period) override;
 
-  UNITREE_MUJOCO_PUBLIC
-  hardware_interface::return_type write(
-    const rclcpp::Time & time, const rclcpp::Duration & period) override;
+  hardware_interface::return_type write(const rclcpp::Time &time, 
+                                       const rclcpp::Duration &period) override;
 
 private:
-
-  std::vector<double> qJ_, dqJ_, tauJ_, 
-                      imu_quaternion_, imu_gyroscope_, imu_accelerometer_, foot_force_sensor_;
+  std::vector<double> qJ_, dqJ_, tauJ_, imu_quaternion_, imu_gyroscope_,
+      imu_accelerometer_, foot_force_sensor_;
   std::vector<double> qJ_cmd_, dqJ_cmd_, tauJ_cmd_, Kp_cmd_, Kd_cmd_;
 
   static constexpr std::array<int, 12> joints_ = {
-                                                  LEG_ORDER_MUJOCO::FR_0, 
-                                                  LEG_ORDER_MUJOCO::FR_1, 
-                                                  LEG_ORDER_MUJOCO::FR_2, 
-                                                  LEG_ORDER_MUJOCO::FL_0,
-                                                  LEG_ORDER_MUJOCO::FL_1,
-                                                  LEG_ORDER_MUJOCO::FL_2,
-                                                  LEG_ORDER_MUJOCO::RR_0, 
-                                                  LEG_ORDER_MUJOCO::RR_1, 
-                                                  LEG_ORDER_MUJOCO::RR_2,
-                                                  LEG_ORDER_MUJOCO::RL_0,
-                                                  LEG_ORDER_MUJOCO::RL_1,
-                                                  LEG_ORDER_MUJOCO::RL_2};
+      LEG_ORDER_MUJOCO::FR_0, LEG_ORDER_MUJOCO::FR_1, LEG_ORDER_MUJOCO::FR_2,
+      LEG_ORDER_MUJOCO::FL_0, LEG_ORDER_MUJOCO::FL_1, LEG_ORDER_MUJOCO::FL_2,
+      LEG_ORDER_MUJOCO::RR_0, LEG_ORDER_MUJOCO::RR_1, LEG_ORDER_MUJOCO::RR_2,
+      LEG_ORDER_MUJOCO::RL_0, LEG_ORDER_MUJOCO::RL_1, LEG_ORDER_MUJOCO::RL_2};
 
-  static constexpr std::array<int, 4> feet_ = {LEG_ORDER_MUJOCO::FR_,
-                                               LEG_ORDER_MUJOCO::FL_,
-                                               LEG_ORDER_MUJOCO::RR_,
-                                               LEG_ORDER_MUJOCO::RL_};
+  static constexpr std::array<int, 4> feet_ = {
+      LEG_ORDER_MUJOCO::FR_, LEG_ORDER_MUJOCO::FL_, 
+      LEG_ORDER_MUJOCO::RR_, LEG_ORDER_MUJOCO::RL_};
 
-  a1_shm::SharedDataA1* shm_;
+  a1_shm::SharedDataA1 *shm_;
   uint64_t seq0_, seq1_;
   bool data_consistent = false;
-
 };
 
-}  // namespace unitree_mujoco
+} // namespace unitree_mujoco
 
-
-#endif  // UNITREE_HARDWARE__UNITREE_HARDWARE_HPP_
+#endif // UNITREE_HARDWARE__UNITREE_HARDWARE_HPP_

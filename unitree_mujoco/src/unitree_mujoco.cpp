@@ -238,9 +238,7 @@ std::vector<hardware_interface::StateInterface>
 UnitreeMujoco::export_state_interfaces()
 {
   RCLCPP_INFO(rclcpp::get_logger("UnitreeMujoco"), "UnitreeMujoco::export_state_interfaces start");
-  // This function will take normal number and bind them to the state_interfaces, then send that state_interfaces into ROS2 high level
-  // But where does the data come from?
-  // The data comes from the this->udp_ object, which is a UDP connection to the robot, each time we call udp, assign value into these number
+  // This function will take pointer and bind them to the state_interfaces, so the ros2_control can take data from these pointer
 
   std::vector<hardware_interface::StateInterface> state_interfaces;
   // Joint state
@@ -283,6 +281,8 @@ UnitreeMujoco::export_state_interfaces()
     info_.sensors[3].name, info_.sensors[3].state_interfaces[0].name, &foot_force_sensor_[2]));
   state_interfaces.emplace_back(hardware_interface::StateInterface(
     info_.sensors[4].name, info_.sensors[4].state_interfaces[0].name, &foot_force_sensor_[3]));
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeMujoco"), "UnitreeMujoco::export_state_interfaces finished sucessfully");
+
   return state_interfaces;
 }
 
@@ -305,6 +305,8 @@ UnitreeMujoco::export_command_interfaces()
     command_interfaces.emplace_back(hardware_interface::CommandInterface(
       info_.joints[i].name, HW_IF_VELOCITY_GAIN, &Kd_cmd_[i]));
   }
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeMujoco"), "UnitreeMujoco::export_command_interfaces finished sucessfully");
+
   return command_interfaces;
 }
 
@@ -347,7 +349,7 @@ hardware_interface::CallbackReturn UnitreeMujoco::on_activate(
         return hardware_interface::CallbackReturn::ERROR;
   }
 
-  RCLCPP_INFO(rclcpp::get_logger("UnitreeMujoco"), "Shared Memory Initialized from Ros2 Side ##############3");
+  RCLCPP_INFO(rclcpp::get_logger("UnitreeMujoco"), "Shared Memory Initialized from Ros2 Side at %p.\n", (void*)shm_);
   
   return hardware_interface::CallbackReturn::SUCCESS;
 }
@@ -359,33 +361,41 @@ hardware_interface::CallbackReturn UnitreeMujoco::on_deactivate(
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-hardware_interface::return_type UnitreeMujoco::read(
-  const rclcpp::Time & /* time */, const rclcpp::Duration & /* period */)
-{
+hardware_interface::return_type
+UnitreeMujoco::read(const rclcpp::Time & /* time */,
+                    const rclcpp::Duration & /* period */) {
   int read_counter = 0;
-  while(1){    
+  while (1) {
     seq0_ = a1_shm::seq_load(shm_);
     if (seq0_ % 2 != 0) {
       continue; // Writer is busy
     }
     // Joint state
-    std::memcpy(&this->qJ_[0]  , shm_->mt_st_q, a1_shm::NJ * sizeof(double));
-    std::memcpy(&this->dqJ_[0] , shm_->mt_st_dq, a1_shm::NJ * sizeof(double));
-    std::memcpy(&this->tauJ_[0], shm_->mt_st_tauEst, a1_shm::NJ * sizeof(double));
-  
+    for (int i = 0; i < a1_shm::NJ; ++i) {
+      std::memcpy(&this->qJ_[i]  , &shm_->mt_st_q[joints_[i]], sizeof(double));
+      std::memcpy(&this->dqJ_[i] , &shm_->mt_st_dq[joints_[i]], sizeof(double));
+      std::memcpy(&this->tauJ_[i], &shm_->mt_st_tauEst[joints_[i]], sizeof(double));
+    }
+
     // Imu state
-    std::memcpy(&this->imu_quaternion_[0], shm_->imu_quaternion, 4 * sizeof(double));
+    std::memcpy(&this->imu_quaternion_[0], shm_->imu_quaternion, 4 * sizeof(double)); 
     std::memcpy(&this->imu_gyroscope_[0], shm_->imu_gyroscope, 3 * sizeof(double));
     std::memcpy(&this->imu_accelerometer_[0], shm_->imu_accelerometer, 3 * sizeof(double));
-    
+
     // foot sensor
-    // TODO: check the order
-    std::memcpy(&this->foot_force_sensor_[0], shm_->foot_force, 3 * sizeof(double));
+    for (int i = 0; i < 4; ++i) {
+      std::memcpy(&this->foot_force_sensor_[i], &shm_->foot_force[feet_[i]], sizeof(double)); 
+    }
+
+    seq1_ = a1_shm::seq_load(shm_);
+
     if (seq0_ == seq1_ && seq0_ % 2 == 0) {
       return hardware_interface::return_type::OK;
     }
-    if(read_counter ++ > 5){
-      RCLCPP_DEBUG(rclcpp::get_logger("UnitreeMujoco"), "Failed to read the state from shared memory, use old state instead");
+    if (read_counter++ > 5) {
+      RCLCPP_INFO(rclcpp::get_logger("UnitreeMujoco"),
+          "Failed to read the state from shared memory, use old state instead this->qJ_[0]=%f; this->foot_force_sensor_=%f", this->qJ_[0], this->foot_force_sensor_[0]);
+      return hardware_interface::return_type::OK;
     }
   }
 }
@@ -393,14 +403,13 @@ hardware_interface::return_type UnitreeMujoco::read(
 hardware_interface::return_type UnitreeMujoco::write(
   const rclcpp::Time &  /* time */, const rclcpp::Duration & /* period */)
 {
-
-
+  // TODO: check the joint order
   for (int i = 0; i < a1_shm::NJ; ++i) {
-    std::memcpy(&shm_->mt_cmd_q[i]   , &this->qJ_cmd_[i], sizeof(double));
-    std::memcpy(&shm_->mt_cmd_dq[i]  , &this->dqJ_cmd_[i], sizeof(double));
-    std::memcpy(&shm_->mt_cmd_tau[i] , &this->tauJ_cmd_[i], sizeof(double));
-    std::memcpy(&shm_->mt_cmd_Kp[i]  , &this->Kp_cmd_[i], sizeof(double));
-    std::memcpy(&shm_->mt_cmd_Kd[i]  , &this->Kd_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_q[joints_[i]]   , &this->qJ_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_dq[joints_[i]]  , &this->dqJ_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_tau[joints_[i]] , &this->tauJ_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_Kp[joints_[i]]  , &this->Kp_cmd_[i], sizeof(double));
+    std::memcpy(&shm_->mt_cmd_Kd[joints_[i]]  , &this->Kd_cmd_[i], sizeof(double));
   }
   return hardware_interface::return_type::OK;
 }

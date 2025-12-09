@@ -87,7 +87,7 @@ controller_interface::return_type UnitreeController::update(
   if(this->is_turning_){
     // Compute desired trajectory using MpcStartTurning and unpack tuple
     auto [qJ_cmd, dqJ_cmd, tauJ_cmd, Kp_cmd, Kd_cmd, mode] = mpc_turning_.compute_desired_trajectory();
-    RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d, the qj is %f", mode, qJ_cmd);
+    // RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d, the qj is %f", mode, qJ_cmd);
     commands.qJ_cmd = qJ_cmd;
     commands.dqJ_cmd = dqJ_cmd;
     commands.tauJ_cmd = tauJ_cmd;
@@ -97,7 +97,7 @@ controller_interface::return_type UnitreeController::update(
   else{
     // Compute desired trajectory using MpcStartPush and unpack tuple
     auto [qJ_cmd, dqJ_cmd, tauJ_cmd, Kp_cmd, Kd_cmd, mode] = mpc_start_push_.compute_desired_trajectory();
-    RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d, the qj is %f", mode, qJ_cmd);
+    // RCLCPP_INFO(get_node()->get_logger(), "UnitreeController::update called, the mode is %d, the qj is %f", mode, qJ_cmd);
     commands.qJ_cmd = qJ_cmd;
     commands.dqJ_cmd = dqJ_cmd;
     commands.tauJ_cmd = tauJ_cmd;
