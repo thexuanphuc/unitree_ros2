@@ -92,7 +92,7 @@ sudo rm -f /dev/shm/UnitreeGo2Shm && make -j10 && ./unitree_mujoco -r a1
 
 + how to use the unitree_mujoco
 
-+ problem: the shared memory sometimes works, some time does not,
++ problem: the shared memory sometimes works, some time does not, when we stop the ros2_control and run again, it can not fetch the address
 + also when reload in mujoco simulatino UI, it does not work 
 + we did unlink memory when we initialize the mujoco, so we should run the mujoco first
 
@@ -100,5 +100,3 @@ sudo rm -f /dev/shm/UnitreeGo2Shm && make -j10 && ./unitree_mujoco -r a1
 + use alignment for shm, so it can be vectorized
 
 + refine the rvis, clean the code, dynamic changing of Kd, Kp (100, 15 for real hardware)
-
-+ check the feedback data
