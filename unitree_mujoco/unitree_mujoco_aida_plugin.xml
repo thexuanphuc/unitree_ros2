@@ -1,0 +1,9 @@
+<library path="unitree_mujoco_aida_plugin">
+  <class name="unitree_mujoco/UnitreeMujoco"
+         type="unitree_mujoco::UnitreeMujoco"
+         base_class_type="hardware_interface::SystemInterface">
+  <description>
+    Mujoco interface of Unitree robots.
+  </description>
+  </class>
+</library>

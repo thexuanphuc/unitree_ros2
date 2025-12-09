@@ -19,41 +19,41 @@
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 
-#include "unitree_hardware/hardware_interface_type_values.hpp"
-#include "unitree_hardware/visibility_control.h"
+#include "unitree_mujoco/mujoco_interface_type_values.hpp"
+#include "unitree_mujoco/visibility_control.h"
 
-namespace unitree_hardware
+namespace unitree_mujoco
 {
-class UnitreeHardware final : public hardware_interface::SystemInterface
+class UnitreeMujoco final : public hardware_interface::SystemInterface
 {
 public:
-  RCLCPP_SHARED_PTR_DEFINITIONS(UnitreeHardware)
+  RCLCPP_SHARED_PTR_DEFINITIONS(UnitreeMujoco)
 
-  UNITREE_HARDWARE_PUBLIC
-  UnitreeHardware();
+  UNITREE_MUJOCO_PUBLIC
+  UnitreeMujoco();
 
-  UNITREE_HARDWARE_PUBLIC
+  UNITREE_MUJOCO_PUBLIC
   hardware_interface::CallbackReturn on_init(const hardware_interface::HardwareInfo & info) override;
 
-  UNITREE_HARDWARE_PUBLIC
+  UNITREE_MUJOCO_PUBLIC
   std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
 
-  UNITREE_HARDWARE_PUBLIC
+  UNITREE_MUJOCO_PUBLIC
   std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
 
-  UNITREE_HARDWARE_PUBLIC
+  UNITREE_MUJOCO_PUBLIC
   hardware_interface::CallbackReturn on_activate(
     const rclcpp_lifecycle::State & previous_state) override;
 
-  UNITREE_HARDWARE_PUBLIC
+  UNITREE_MUJOCO_PUBLIC
   hardware_interface::CallbackReturn on_deactivate(
     const rclcpp_lifecycle::State & previous_state) override;
 
-  UNITREE_HARDWARE_PUBLIC
+  UNITREE_MUJOCO_PUBLIC
   hardware_interface::return_type read(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
-  UNITREE_HARDWARE_PUBLIC
+  UNITREE_MUJOCO_PUBLIC
   hardware_interface::return_type write(
     const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
@@ -83,6 +83,6 @@ private:
 
 };
 
-}  // namespace unitree_hardware
+}  // namespace unitree_mujoco
 
 #endif  // UNITREE_HARDWARE__UNITREE_HARDWARE_HPP_

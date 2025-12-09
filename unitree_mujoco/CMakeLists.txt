@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8...3.10)
-project(unitree_hardware)
+project(unitree_mujoco)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -30,36 +30,36 @@ set_target_properties(
 )
 
 # compile
-add_library(unitree_hardware_aida_plugin SHARED
-  src/unitree_hardware.cpp
+add_library(unitree_mujoco_aida_plugin SHARED
+  src/unitree_mujoco.cpp
 )
-target_include_directories(unitree_hardware_aida_plugin PRIVATE
+target_include_directories(unitree_mujoco_aida_plugin PRIVATE
   include
 )
 
-ament_target_dependencies(unitree_hardware_aida_plugin
+ament_target_dependencies(unitree_mujoco_aida_plugin
   hardware_interface
   pluginlib
   rclcpp
 )
 
 target_link_libraries(
-  unitree_hardware_aida_plugin
+  unitree_mujoco_aida_plugin
   lcm
   unitree_legged_sdk_amd64
 )
 
 
-pluginlib_export_plugin_description_file(hardware_interface unitree_hardware_aida_plugin.xml)
+pluginlib_export_plugin_description_file(hardware_interface unitree_mujoco_aida_plugin.xml)
 
-install(FILES unitree_hardware_aida_plugin.xml
+install(FILES unitree_mujoco_aida_plugin.xml
   DESTINATION share/${PROJECT_NAME}
 )
 
 
 # install
 install(
-  TARGETS unitree_hardware_aida_plugin
+  TARGETS unitree_mujoco_aida_plugin
   DESTINATION lib
 )
 install(
@@ -72,7 +72,7 @@ ament_export_include_directories(
   include
 )
 ament_export_libraries(
-  unitree_hardware_aida_plugin
+  unitree_mujoco_aida_plugin
 )
 ament_export_dependencies(
   hardware_interface
